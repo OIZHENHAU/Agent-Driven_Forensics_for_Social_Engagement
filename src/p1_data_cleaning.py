@@ -10,10 +10,8 @@ CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "data",
                           "cleaned_data.csv")
 
 # Load Raw CSV file
-def load_raw() -> pd.DataFrame:
+def load_dataset() -> pd.DataFrame:
     df = pd.read_excel(RAW_PATH)
-    print(f"    Shape  : {df.shape}")
-    print(f"    Columns: {df.columns.tolist()}")
     return df
 
 # Print a summary of missing value
@@ -68,7 +66,7 @@ def save_clean_dataset(df: pd.DataFrame) -> None:
 
 
 '''def main():
-    df = load_raw()
+    df = load_dataset()
     report_missing(df)
     df = data_cleaning(df)
     validateCell(df)
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     main()
 '''
 
-'''df = load_raw()
+'''df = load_dataset()
 report_missing(df)
 clean_df = data_cleaning(df)
 print(df.columns.shape)
