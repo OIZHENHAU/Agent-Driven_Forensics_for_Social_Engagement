@@ -37,7 +37,7 @@ To monitor each task's performance, I will also involve in all task as well =@=
 
 ## Code Structure:
 Below image are the code structure of our project.
-![Diagram](img/project_strucure.png)
+![Diagram](img/project_structure.png)
 
 There are 5 python file in the `src` which is based on your task.
 - Example: Zhen Hau (Task 4), so I will edit my code in `p4_pca.py`.
