@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 # Get Raw Data from File Path
-RAW_PATH   = os.path.join(os.path.dirname(__file__), "..", "data",
+RAW_PATH = os.path.join(os.path.dirname(__file__), "..", "data",
                           "fake_social_media_global_2_0_with_missing.xlsx")
 # The csv file path after data cleaning
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "data",
