@@ -65,7 +65,7 @@ def save_clean_dataset(df: pd.DataFrame) -> None:
     print(f"\nCleaned data saved successfully to the path: {CLEAN_PATH}")
 
 
-'''def main():
+def main():
     df = load_dataset()
     report_missing(df)
     df = data_cleaning(df)
@@ -77,7 +77,7 @@ def save_clean_dataset(df: pd.DataFrame) -> None:
 
 if __name__ == "__main__":
     main()
-'''
+
 
 '''df = load_dataset()
 report_missing(df)
