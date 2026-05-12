@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f5f6fa;
+            margin: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+            width: 150px;
+        }
+
+        img {
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        a {
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Influencer Clout Detective</h1>
+
+<h2>Overview</h2>
+
+<div class="cards">
+    <div class="card">
+        <h3>Total accounts</h3>
+        <p>{{ total }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Real accounts</h3>
+        <p>{{ real }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Suspicious accounts</h3>
+        <p>{{ fake }}</p>
+    </div>
+</div>
+
+<h2>Graphs</h2>
+
+<div class="tabs">
+    <button onclick="showMainGraph('engagement')" class="tab-btn active">Engagement vs Followers</button>
+    <button onclick="showMainGraph('pca')" class="tab-btn">PCA Scatter</button>
+    <button onclick="showMainGraph('auth')" class="tab-btn">Auth Score Dist</button>
+    <button onclick="showMainGraph('eda')" class="tab-btn">EDA Plots</button>
+</div>
+
+<div id="engagement" class="graph-section">
+    <h3>Engagement vs Followers</h3>
+    <p>Graph will be added after EDA/model output is ready.</p>
+</div>
+
+<div id="pca" class="graph-section" style="display:none;">
+    <h3>PCA Scatter</h3>
+    <p>PCA graph will be added after p4_pca.py is ready.</p>
+</div>
+
+<div id="auth" class="graph-section" style="display:none;">
+    <h3>Authenticity Score Distribution</h3>
+    <p>Auth score graph will be added after p3_agent.py is ready.</p>
+</div>
+
+<div id="eda" class="graph-section" style="display:none;">
+    <h3>EDA Plots</h3>
+
+    <select onchange="showEdaPlot(this.value)">
+        <option value="box">Box Plot</option>
+        <option value="dist">Distribution</option>
+        <option value="corr">Correlation</option>
+        <option value="platform">Platform Plot</option>
+    </select>
+
+    <br><br>
+
+    <img id="eda-image" src="/outputs/box_plot_features.png" width="650">
+</div>
+
+<a href="/dashboard2">Go Dashboard 2</a><br>
+<a href="/dashboard3">Go Dashboard 3</a>
+
+<script>
+function showMainGraph(graphId) {
+    const sections = document.querySelectorAll(".graph-section");
+    sections.forEach(section => section.style.display = "none");
+
+    document.getElementById(graphId).style.display = "block";
+
+    const buttons = document.querySelectorAll(".tab-btn");
+    buttons.forEach(btn => btn.classList.remove("active"));
+
+    event.target.classList.add("active");
+}
+
+function showEdaPlot(type) {
+    const img = document.getElementById("eda-image");
+
+    if (type === "box") {
+        img.src = "/outputs/box_plot_features.png";
+    } else if (type === "dist") {
+        img.src = "/outputs/histogram_plot_distributions.png";
+    } else if (type === "corr") {
+        img.src = "/outputs/correlation_plot.png";
+    } else if (type === "platform") {
+        img.src = "/outputs/platform_plot.png";
+    }
+}
+</script>
+
+</body>
+</html>
