@@ -8,6 +8,7 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.stats import skew
+import json
 
 
 # Get the cleaned dataset path
@@ -112,10 +113,7 @@ def plot_pca_scatter(X_pca, y: pd.Series):
 
     for label, name in [(0, "Real"), (1, "Fake")]:
         mask = y == label
-        ax.scatter(
-            X_pca[mask, 0], X_pca[mask, 1],
-            c=PALETTE[label], label=name, alpha=0.4, s=15
-        )
+        ax.scatter(X_pca[mask, 0], X_pca[mask, 1], c=PALETTE[label], label=name, alpha=0.4, s=15)
 
     ax.set_title("PCA PC1 vs PC2 (Real vs Fake)")
     ax.set_xlabel("PC1")
@@ -131,11 +129,7 @@ def plot_pca_scatter(X_pca, y: pd.Series):
 
 # Plot top feature loadings for PC1 and PC2
 def plot_loadings(pca, feature_names: list, top_n: int = 10):
-    loadings = pd.DataFrame(
-        pca.components_[:2].T,
-        index=feature_names,
-        columns=["PC1", "PC2"]
-    )
+    loadings = pd.DataFrame(pca.components_[:2].T, index=feature_names, columns=["PC1", "PC2"])
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
@@ -166,6 +160,14 @@ def save_pca_data(X_pca, y: pd.Series, n_components: int):
     print(f"PCA data saved to: {PCA_PATH}")
 
 
+def save_feature_json(features):
+    meta = {"features": features}
+    meta_path = os.path.join(os.path.dirname(__file__), "..", "data", "pca_features.json")
+    with open(meta_path, "w") as f:
+        json.dump(meta, f)
+
+    print("Importance faeture saved successfully.")
+
 
 def main():
     X, y, feature_names = load_and_prepare_data()
@@ -181,6 +183,8 @@ def main():
     plot_loadings(pca, feature_names)
     # Save PCA dataset
     save_pca_data(X_pca, y, n_components)
+    #Save the importnace faetures into the pca_meta.json file
+    save_feature_json(feature_names)
 
 
 if __name__ == "__main__":
