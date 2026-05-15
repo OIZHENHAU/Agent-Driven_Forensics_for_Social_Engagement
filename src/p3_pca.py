@@ -25,8 +25,9 @@ PALETTE = {0: "#2ecc71", 1: "#e74c3c"}
 
 #Get the cleaned dataset
 def load_dataset() -> pd.DataFrame:
-    df = pd.read_csv(CLEAN_PATH)
-    return df
+    clean_dataset = pd.read_csv(CLEAN_PATH)
+    return clean_dataset
+
 
 # Check the skewness for each columns in the datsset
 def get_skewness():

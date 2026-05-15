@@ -76,9 +76,6 @@ def plot_distribution(df: pd.DataFrame) -> None:
     print(f"Histgram plot saved to path: {path}")
 
 
-# df = load_dataset()
-# plot_distribution(df)
-
 def plot_correlation_diagram(df: pd.DataFrame) -> pd.DataFrame:
     column_integer = df.select_dtypes(include=[np.number]).drop(columns=["is_fake"])
     # Calculate the Pearson correlation between every numeric column
@@ -128,10 +125,6 @@ def plot_boxplots(df: pd.DataFrame) -> None:
     print(f"Box plot (Real vs Fake) saved to: {path}")
 
 
-# df = load_dataset()
-# plot_distribution(df)
-# plot_correlation_diagram(df)
-# plot_boxplots(df)
 
 # Plot a diagram based on the platform user use with chat form and histogram to determine the percentage of fake
 def platform_plot(df: pd.DataFrame) -> None:
@@ -157,11 +150,7 @@ def platform_plot(df: pd.DataFrame) -> None:
     print(f"Platform plot successfully saved to path: {path}")
 
 
-# df = load_dataset()
-# platform_plot(df)
-
-
-'''def main():
+def main():
     df = load_dataset()
     basic_statistic_view(df)
     plot_distribution(df)
@@ -172,4 +161,4 @@ def platform_plot(df: pd.DataFrame) -> None:
 
 if __name__ == "__main__":
     main()
-'''
+

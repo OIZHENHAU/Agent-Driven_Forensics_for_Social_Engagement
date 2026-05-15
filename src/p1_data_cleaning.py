@@ -39,16 +39,13 @@ def data_cleaning(df: pd.DataFrame) -> pd.DataFrame:
 
     df["follower_following_ratio"] = (df["followers"] / df["following"]).round(4)
 
-    df["suspicious_engagement_rate"] = (
-        (df["spam_comments_rate"] + df["generic_comment_rate"]) /
-        df["posts"].replace(0, 1)
-    ).round(6)
+    df["suspicious_engagement_rate"] = ((df["spam_comments_rate"] + df["generic_comment_rate"])).round(6)
 
     binary_cols = ["has_profile_pic", "verified", "is_fake", "suspicious_links_in_bio"]
     df[binary_cols] = df[binary_cols].fillna(0).astype(int)
 
-
     return df 
+
 
 # Check if there is any missing, NaN or null value cell
 def validateCell(df: pd.DataFrame) -> None:
@@ -79,10 +76,3 @@ if __name__ == "__main__":
     main()
 
 
-'''df = load_dataset()
-report_missing(df)
-clean_df = data_cleaning(df)
-print(df.columns.shape)
-print(clean_df.columns.shape)
-print(validateCell(clean_df))
-'''
