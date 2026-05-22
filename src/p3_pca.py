@@ -20,139 +20,120 @@ PCA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "pca_data.csv")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Colour to determine the real or fake account, grren represent real and red represent fake.
-PALETTE = {0: "#2ecc71", 1: "#e74c3c"}
 
-#Get the cleaned dataset
-def load_dataset() -> pd.DataFrame:
-    clean_dataset = pd.read_csv(CLEAN_PATH)
-    return clean_dataset
+# Load the datzet
+def load_dataset():
+    df = pd.read_csv(CLEAN_PATH)
+    return df
 
 
-# Check the skewness for each columns in the datsset
-def get_skewness():
-    df = load_dataset()
-
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
-    skewness = df[numeric_cols].apply(skew).sort_values(ascending=False)
-    print(skewness)
-
-
-def load_and_prepare_data():
-    # Get the cleaned dataset.
-    df = load_dataset()
+# Select all numerical features
+def select_features(df):
     
-    # Get numeric columns, exclude column is fake, username and platform or any non-numerical columns
-    exclude_columns = ['is_fake', 'username', 'platform']
-    numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
-    features_needed = [col for col in numeric_columns if col not in exclude_columns]
-    
-    X = df[features_needed]
-    y = df['is_fake']
-    
-    return X, y, features_needed
+    numerical_columns = (df.select_dtypes(include='number').columns)
+    # Columns to remove
+    drop_columns = ["account_id", "post_id"]
+
+    # Keep only useful features
+    features = [col for col in numerical_columns if col not in drop_columns]
+
+    X = df[features]
+
+    print("\nSelected Features:")
+    print(features)
+
+    return X
 
 
-#Scale the features
-def scale_features(X: pd.DataFrame):
+# Normalizes the features
+def normalize_features(X):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
+
     return X_scaled
 
 
-# Fit PCA and plot explained variance using scree plot
-def plot_scree(X_scaled, n_components=None):
-    pca_full = PCA(n_components=n_components)
-    pca_full.fit(X_scaled)
+# Apply PCA to the scaled X
+def apply_pca(X_scaled):
+    # retain 95% variance
+    pca = PCA(n_components=0.95, random_state=42)
 
-    explained = pca_full.explained_variance_ratio_
-    cumulative = np.cumsum(explained)
-
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-
-    # Individual explained variance
-    axes[0].bar(range(1, len(explained) + 1), explained, color="steelblue")
-    axes[0].set_title("Explained Variance per Component")
-    axes[0].set_xlabel("Principal Component")
-    axes[0].set_ylabel("Explained Variance Ratio")
-
-    # Cumulative explained variance
-    axes[1].plot(range(1, len(cumulative) + 1), cumulative, marker="o", color="steelblue")
-    axes[1].axhline(0.90, color="red", linestyle="--", label="90% threshold")
-    axes[1].axhline(0.95, color="orange", linestyle="--", label="95% threshold")
-    axes[1].set_title("Cumulative Explained Variance")
-    axes[1].set_xlabel("Number of Components")
-    axes[1].set_ylabel("Cumulative Explained Variance")
-    axes[1].legend()
-
-    fig.tight_layout()
-    path = os.path.join(OUTPUT_DIR, "pca_scree_plot.png")
-    fig.savefig(path)
-    plt.close(fig)
-    print(f"Scree plot saved to: {path}")
-
-    # Print how many components needed for 90% and 95%
-    n90 = np.argmax(cumulative >= 0.90) + 1
-    n95 = np.argmax(cumulative >= 0.95) + 1
-    print(f"Components needed for 90% variance: {n90}")
-    print(f"Components needed for 95% variance: {n95}")
-
-    return pca_full, n90
-
-
-# Apply PCA with chosen number of components.
-def apply_pca(X_scaled, n_components: int):
-    pca = PCA(n_components=n_components)
     X_pca = pca.fit_transform(X_scaled)
+
+    print("\n")
+    print("Original Features:", X_scaled.shape[1])
+    print("Reduced Features:", X_pca.shape[1])
+    print("Explained Variance Ratio:")
+    print(pca.explained_variance_ratio_)
+    print("\nTotal Explained Variance:")
+    print(pca.explained_variance_ratio_.sum())
 
     return pca, X_pca
 
 
-# Plot PC1 vs PC2 coloured by Real & Fake
-def plot_pca_scatter(X_pca, y: pd.Series):
-    fig, ax = plt.subplots(figsize=(9, 6))
+# Plot a scatter plot to visualize the PCA, colored by performance label
+def plot_pca_scatter(X_pca, df):
 
-    for label, name in [(0, "Real"), (1, "Fake")]:
-        mask = y == label
-        ax.scatter(X_pca[mask, 0], X_pca[mask, 1], c=PALETTE[label], label=name, alpha=0.4, s=15)
+    plt.figure(figsize=(10, 6))
 
-    ax.set_title("PCA PC1 vs PC2 (Real vs Fake)")
-    ax.set_xlabel("PC1")
-    ax.set_ylabel("PC2")
-    ax.legend()
+    labels = df["performance_bucket_label"].values
+    unique_labels = ["low", "medium", "high", "viral"]
+    colors = ["#d62728", "#ff7f0e", "#2ca02c", "#1f77b4"]
 
-    fig.tight_layout()
-    path = os.path.join(OUTPUT_DIR, "pca_scatter.png")
-    fig.savefig(path)
-    plt.close(fig)
-    print(f"PCA scatter plot saved to: {path}")
+    for label, color in zip(unique_labels, colors):
+        mask = labels == label
+        plt.scatter(X_pca[mask, 0], X_pca[mask, 1], alpha=0.4, label=label, color=color, s=10)
 
 
-# Plot top feature loadings for PC1 and PC2
-def plot_loadings(pca, feature_names: list, top_n: int = 10):
-    loadings = pd.DataFrame(pca.components_[:2].T, index=feature_names, columns=["PC1", "PC2"])
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.title("PCA Projection (colored by performance bucket)")
+    plt.legend(title="Performance", markerscale=3)
+    plt.savefig(os.path.join(OUTPUT_DIR, "pca_projection.png"), dpi=150)
+    plt.show()
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-    for i, pc in enumerate(["PC1", "PC2"]):
-        top = loadings[pc].abs().nlargest(top_n).index
-        data = loadings.loc[top, pc].sort_values()
-        colors = ["#e74c3c" if v < 0 else "lightblue" for v in data]
-        axes[i].barh(data.index, data.values, color=colors)
-        axes[i].axvline(0, color="black", linewidth=0.8)
-        axes[i].set_title(f"Top {top_n} Feature Loadings – {pc}")
-        axes[i].set_xlabel("Loading")
 
-    fig.tight_layout()
-    path = os.path.join(OUTPUT_DIR, "pca_loadings.png")
-    fig.savefig(path)
-    plt.close(fig)
-    print(f"PCA loadings plot saved to: {path}")
+def plot_explained_variance(pca):
+    cumulative_variance = (pca.explained_variance_ratio_.cumsum())
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(range(1, len(cumulative_variance) + 1), cumulative_variance, marker="o")
+
+    plt.xlabel("Number of Components")
+    plt.ylabel("Cumulative Explained Variance")
+    plt.title("PCA Explained Variance")
+
+    plt.grid(True)
+
+    plt.savefig(os.path.join(OUTPUT_DIR,"pca_variance.png"))
+
+    plt.show()
+
+
+def perform_PCA(df):
+    X = select_features(df)
+    X_scaled = normalize_features(X)
+
+    pca, X_pca = apply_pca(X_scaled)
+
+    print("\n")
+    # print("X_PCA:")
+    # print(X_pca)
+
+    plot_pca_scatter(X_pca, df)
+    plot_explained_variance(pca)
+
+    print("Task 3 done.")
+
+    return pca, X_pca
+
 
 
 
 # Save the PCA-transformed dataset
-def save_pca_data(X_pca, y: pd.Series, n_components: int):
+'''def save_pca_data(X_pca, y: pd.Series, n_components: int):
     cols = [f"PC{i+1}" for i in range(n_components)]
     df_pca = pd.DataFrame(X_pca, columns=cols)
     df_pca["is_fake"] = y.values
@@ -168,25 +149,25 @@ def save_feature_json(features):
         json.dump(meta, f)
 
     print("Importance faeture saved successfully.")
+'''
 
-
+'''
 def main():
-    X, y, feature_names = load_and_prepare_data()
-    # we Scale the features first
-    X_scaled = scale_features(X)
-    # We do scen plot to gather the number of components need to fit our PCA
-    X_scalee, n_components = plot_scree(X_scaled)
-    # We apply PCA with chosen components with varaince more than or equal to 90%
-    pca, X_pca = apply_pca(X_scaled, n_components)
-    # Do scatter plot between real and fake account
-    plot_pca_scatter(X_pca, y)
-    # We do feature loadings plot
-    plot_loadings(pca, feature_names)
-    # Save PCA dataset
-    save_pca_data(X_pca, y, n_components)
-    #Save the importnace faetures into the pca_meta.json file
-    save_feature_json(feature_names)
+    df = load_dataset()
+    X = select_features(df)
+    X_scaled = normalize_features(X)
+
+    pca, X_pca = apply_pca(X_scaled)
+
+    print("\n")
+    # print("X_PCA:")
+    # print(X_pca)
+
+    plot_pca_scatter(X_pca, df)
+    plot_explained_variance(pca)
 
 
 if __name__ == "__main__":
     main()
+
+'''

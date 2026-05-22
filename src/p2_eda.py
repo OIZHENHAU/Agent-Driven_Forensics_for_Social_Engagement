@@ -12,14 +12,14 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.decomposition import PCA
 from sklearn.inspection import permutation_importance
+from scipy.stats import skew
 
 # Get the path for cleaned datasert
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "cleaned_data.csv")
 # Get the output directory
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "outputs")
+
 os.makedirs(OUTPUT_PATH, exist_ok=True)
-# Green means real, Red means fake
-PALETTE = {0: "#2ecc71", 1: "#e74c3c"}
 
 
 # Load the cleaned dataset
@@ -27,138 +27,150 @@ def load_dataset() -> pd.DataFrame:
     df = pd.read_csv(CLEAN_PATH)
     return df
 
-def basic_statistic_view(df: pd.DataFrame) -> pd.DataFrame:
-    print("\nBasic statistics:")
-    print(df.describe(include="all").T.to_string())
-    print("\nClass balance:")
-    print(df["is_fake"].value_counts(normalize=True).mul(100).round(2)
-          .rename(index={0: "Real", 1: "Fake"}).to_string(), "%")
-    
 
-def plot_distribution(df: pd.DataFrame) -> None:
-    num_columns = ["followers", "following", "follower_following_ratio",
-                   "posts", "account_age_days", "suspicious_engagement_rate",
-                   "spam_comments_rate", "generic_comment_rate"]
-    
-    # Create a figure of 4 * 2 grid of subplots and set the overall suize of width 14px and height 16px
-    fig, axes = plt.subplots(4, 2, figsize = (14, 16))
-    # Convert the 2D array into 1D array
-    axes = axes.ravel()
-    for index, column in enumerate(num_columns):
-        ax = axes[index]
-        #print("Column ", column)
+#Plot the histogram distribution
+def plot_histogram(df: pd.DataFrame) -> None:
 
-        for label, group in df.groupby("is_fake"):
-            # print("Group ", group)
-            value = group[column].dropna()
-            value = value[value > 0]
+    numeric_columns = df.select_dtypes(include='number').columns
 
-            if value.empty:
-                continue
+    num_features = len(numeric_columns)
+    rows = (num_features // 3) + 1
 
-            if label == 1:
-                hist_label = "Fake"
-            else:
-                hist_label = "Real"
+    fig, axes = plt.subplots(rows, 3, figsize=(18, rows * 5))
 
-            # Use log1p instead of log because it handles zero value safely
-            log_vals = np.log1p(value)
-            sns.histplot(log_vals, ax=ax, kde=True, color=PALETTE[label], label=hist_label, alpha=0.55, bins=40)
-        
-        ax.set_title(f"{column}")
-        ax.set_xlabel("")
-        ax.legend()
-    
-    fig.suptitle("Histogram Plot Distributions by Account Type", fontsize=15)
-    path = os.path.join(OUTPUT_PATH, "histogram_plot_distributions.png")
-    fig.savefig(path)
-    plt.close(fig)
-    print(f"Histgram plot saved to path: {path}")
+    axes = axes.flatten()
+
+    for i, col in enumerate(numeric_columns):
+
+        axes[i].hist(df[col], bins=30)
+
+        axes[i].set_title(f"Distribution of {col}")
+
+        axes[i].set_xlabel(col)
+        axes[i].set_ylabel("Frequency")
 
 
-def plot_correlation_diagram(df: pd.DataFrame) -> pd.DataFrame:
-    column_integer = df.select_dtypes(include=[np.number]).drop(columns=["is_fake"])
-    # Calculate the Pearson correlation between every numeric column
-    corr = column_integer.corr()
+    # Remove unused subplot
+    for j in range(len(numeric_columns),len(axes)):
+        fig.delaxes(axes[j])
 
-    fig, axes = plt.subplots(figsize=(14, 14))
-    mask = np.triu(np.ones_like(corr, dtype=bool))
-    sns.heatmap(corr, mask=mask, annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=axes)
-    axes.set_title("Feature Correlation Matrix", fontsize=15)
-    # Give th plot more padding space around the figure
+
     plt.tight_layout()
-    path = os.path.join(OUTPUT_PATH, "correlation_plot.png")
-    fig.savefig(path)
-    plt.close(fig)
-    print(f"Correlation plot saved to: {path}")
+    plt.savefig(os.path.join(OUTPUT_PATH,"all_histograms_features.png"))
+
+    plt.show()
 
 
-# BoxPlot for comparing each features based on real and fake account
+# Plot all boxplot for all numerical columns
 def plot_boxplots(df: pd.DataFrame) -> None:
-    key_features = ["followers", "following", "follower_following_ratio", "suspicious_engagement_rate", "spam_comments_rate",
-                    "caption_similarity_score", "content_similarity_score", "username_randomness"]
 
-    fig, axes = plt.subplots(4, 2, figsize=(14, 16))
-    axes = axes.ravel()
+    numeric_columns = df.select_dtypes(include='number').columns
+    num_features = len(numeric_columns)
+    rows = (num_features // 3) + 1
 
-    for index, column in enumerate(key_features):
-        axe = axes[index]
-        
-        plot_is_fake = df[["is_fake", column]].copy()
-        plot_is_fake["is_fake"] = plot_is_fake["is_fake"].map({0: "Real", 1: "Fake"})
-        plot_is_fake[column] = np.log1p(plot_is_fake[column].clip(lower=0))
+    fig, axes = plt.subplots(rows, 3, figsize=(18, rows * 5))
+    axes = axes.flatten()
 
-        # Create box plot
-        sns.boxplot(data=plot_is_fake, x="is_fake", y=column, hue="is_fake", palette={"Real": PALETTE[0], "Fake": PALETTE[1]}, ax=axe)
-        
-        axe.set_title(f"{column}")
-        axe.set_xlabel("")
+    for i, col in enumerate(numeric_columns):
 
-    fig.suptitle("Feature Distributions: Real vs Fake Accounts", fontsize=15)
-    fig.tight_layout()
-    
+        axes[i].boxplot(df[col])
 
-    path = os.path.join(OUTPUT_PATH, "box_plot_features.png")
-    fig.savefig(path)
-    plt.close(fig)
-    
-    print(f"Box plot (Real vs Fake) saved to: {path}")
+        axes[i].set_title(f"Boxplot of {col}")
+
+    # Remove unused subplot
+    for j in range(len(numeric_columns), len(axes)):
+        fig.delaxes(axes[j])
 
 
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_PATH, "all_boxplots_features.png"))
 
-# Plot a diagram based on the platform user use with chat form and histogram to determine the percentage of fake
-def platform_plot(df: pd.DataFrame) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-
-    platform_counts = df["platform"].value_counts()
-    # axes[0].pie(platform_counts, labels=platform_counts.index, autopct="%1.1f%%", startangle=140)
-    axes[0].pie(platform_counts, labels=platform_counts.index, autopct="%1.1f%%")
-    axes[0].set_title("Platform Distribution")
-
-    platform_fake = (df.groupby("platform")["is_fake"].mean().mul(100).sort_values(ascending=False))
-    sns.barplot(x=platform_fake.index, y=platform_fake.values,palette="Reds_d", ax=axes[1])
-
-    axes[1].set_title("Fake Account Rate Based on Platform (%)")
-    axes[1].set_ylabel("Fake %")
-    axes[1].set_xlabel("")
-
-    fig.tight_layout()
-    path = os.path.join(OUTPUT_PATH, "platform_plot.png")
-    fig.savefig(path)
-    plt.close(fig)
-
-    print(f"Platform plot successfully saved to path: {path}")
+    plt.show()
 
 
-def main():
-    df = load_dataset()
-    basic_statistic_view(df)
-    plot_distribution(df)
-    plot_correlation_diagram(df)
+# PLlot correlation heatmap diagram
+def correlation_heatmap(df):
+
+    numeric_columns = df.select_dtypes(include=np.number)
+
+    correlation_matrix = numeric_columns.corr()
+
+    plt.figure(figsize=(14, 8))
+
+    sns.heatmap(correlation_matrix, annot=True, fmt=".2f")
+
+    plt.title("Correlation Heatmap")
+    plt.savefig("outputs/correlation_heatmap.png")
+
+    plt.show()
+
+
+# Plot a log validation diagram
+def validate_log_normal(df: pd.DataFrame) -> None:
+
+    numeric_columns = (df.select_dtypes(include=np.number).columns)
+
+    valid_columns = []
+    skipped_columns = []
+
+    # Check which columns are safe
+    for col in numeric_columns:
+
+        min_value = df[col].min()
+
+        if min_value > -1:
+            valid_columns.append(col)
+        else:
+            skipped_columns.append(col)
+
+    print("\nSafe Columns:")
+    print(valid_columns)
+
+    print("\nSkipped Columns:")
+    print(skipped_columns)
+
+    # Create subplot
+    num_features = len(valid_columns)
+    rows = (num_features // 3) + 1
+
+    fig, axes = plt.subplots(rows, 3, figsize=(18, rows * 5))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(valid_columns):
+        clean_data = (df[col].dropna())
+
+        original_skew = skew(clean_data)
+        log_data = np.log1p(clean_data)
+        transformed_skew = skew(log_data)
+
+        print( f"\n{col}")
+
+        print(f"Original Skewness: " f"{original_skew:.2f}")
+
+        print(f"Log Transformed " f"Skewness: " f"{transformed_skew:.2f}")
+
+        axes[i].hist(log_data, bins=30)
+
+        axes[i].set_title(f"Log Distribution\n{col}")
+
+
+    # Remove empty plots
+    for j in range(len(valid_columns), len(axes)):
+        fig.delaxes(axes[j])
+
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_PATH,"all_log_validation_features.png"))
+
+    plt.show()
+
+
+def exploratory_analysis(df):
+    plot_histogram(df)
     plot_boxplots(df)
-    platform_plot(df)
+    correlation_heatmap(df)
+    validate_log_normal(df)
 
-
-if __name__ == "__main__":
-    main()
+    print("Task 2 done.")
 
