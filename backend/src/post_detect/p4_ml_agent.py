@@ -11,8 +11,8 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score)
 
 
-CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "cleaned_data.csv")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
+CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_data.csv")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "post")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -77,7 +77,6 @@ def train_isolation_forest(X_normal, X_all, contamination=0.05):
 
 
 def train_lof(X_normal, X_all):
-    # n_neighbors=30: larger neighbourhood captures broader local density patterns
     model = LocalOutlierFactor(n_neighbors=30, novelty=True, metric="euclidean", n_jobs=-1)
     model.fit(X_normal)
     scores = model.decision_function(X_all)
@@ -123,7 +122,7 @@ def plot_anomaly_results(predictions, title):
     plt.bar(["Normal", "Anomaly"], [normal, anomaly])
     plt.title(title)
     plt.ylabel("Count")
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
     plt.close()
 
 
@@ -136,7 +135,7 @@ def plot_confusion_matrix(y_true, y_pred, title):
     plt.title(title)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
     plt.close()
 
 
@@ -162,7 +161,6 @@ def main(df):
     X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    # Train on low+medium only: "high" posts are too similar to "viral" and inflate false negatives
     mask_normal = df["performance_bucket_label"].isin(["low", "high"])
     X_normal = X_scaled[mask_normal]
 

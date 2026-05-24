@@ -12,11 +12,11 @@ import json
 
 
 # Get the cleaned dataset path
-CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "cleaned_data.csv")
+CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_data.csv")
 # Get the output directory
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "post")
 # Get the PCA dataset path
-PCA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "pca_data.csv")
+PCA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "pca_data.csv")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -88,7 +88,7 @@ def plot_pca_scatter(X_pca, df):
     plt.ylabel("Principal Component 2")
     plt.title("PCA Projection (colored by performance bucket)")
     plt.legend(title="Performance", markerscale=3)
-    plt.savefig(os.path.join(OUTPUT_DIR, "pca_projection.png"), dpi=150)
+    plt.savefig(os.path.join(OUTPUT_DIR, "pca_projection_post.png"), dpi=150)
     plt.show()
 
 
@@ -106,7 +106,7 @@ def plot_explained_variance(pca):
 
     plt.grid(True)
 
-    plt.savefig(os.path.join(OUTPUT_DIR,"pca_variance.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR,"pca_variance_post.png"))
 
     plt.show()
 
@@ -142,7 +142,7 @@ def perform_PCA(df):
 
 def save_feature_json(features):
     meta = {"features": features}
-    meta_path = os.path.join(os.path.dirname(__file__), "..", "data", "pca_features.json")
+    meta_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "pca_features.json")
     with open(meta_path, "w") as f:
         json.dump(meta, f)
 

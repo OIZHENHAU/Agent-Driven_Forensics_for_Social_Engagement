@@ -15,11 +15,12 @@ from sklearn.inspection import permutation_importance
 from scipy.stats import skew
 
 # Get Raw Data from File Path
-RAW_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "Instagram_Analytics.csv")
+RAW_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "Instagram_fake_profile_dataset.csv")
 # The csv file path after data cleaning
-CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_data.csv")
+CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_account_data.csv")
 # Get the output directory
-OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "outputs")
+OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "account")
+
 
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
@@ -31,7 +32,7 @@ def load_dataset() -> pd.DataFrame:
 
 
 #Plot the histogram distribution
-def plot_histogram(df: pd.DataFrame) -> None:
+def plot_histogram_account(df: pd.DataFrame) -> None:
 
     numeric_columns = df.select_dtypes(include='number').columns
 
@@ -58,13 +59,13 @@ def plot_histogram(df: pd.DataFrame) -> None:
 
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_PATH,"all_histograms_features.png"))
+    plt.savefig(os.path.join(OUTPUT_PATH,"all_histograms_features_account.png"))
 
     plt.show()
 
 
 # Plot all boxplot for all numerical columns
-def plot_boxplots(df: pd.DataFrame) -> None:
+def plot_boxplots_account(df: pd.DataFrame) -> None:
 
     numeric_columns = df.select_dtypes(include='number').columns
     num_features = len(numeric_columns)
@@ -85,15 +86,16 @@ def plot_boxplots(df: pd.DataFrame) -> None:
 
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_PATH, "all_boxplots_features.png"))
+    plt.savefig(os.path.join(OUTPUT_PATH, "all_boxplots_features_account.png"))
 
     plt.show()
 
 
 # PLlot correlation heatmap diagram
-def correlation_heatmap(df):
+def correlation_heatmap_account(df):
 
     numeric_columns = df.select_dtypes(include=np.number)
+    numeric_columns = numeric_columns.loc[:, numeric_columns.var() > 0]
 
     correlation_matrix = numeric_columns.corr()
 
@@ -102,13 +104,13 @@ def correlation_heatmap(df):
     sns.heatmap(correlation_matrix, annot=True, fmt=".2f")
 
     plt.title("Correlation Heatmap")
-    plt.savefig("backend/outputs/correlation_heatmap.png")
+    plt.savefig(os.path.join(OUTPUT_PATH, "correlation_heatmap_account.png"))
 
     plt.show()
 
 
 # Plot a log validation diagram
-def validate_log_normal(df: pd.DataFrame) -> None:
+def validate_log_normal_account(df: pd.DataFrame) -> None:
 
     numeric_columns = (df.select_dtypes(include=np.number).columns)
 
@@ -163,16 +165,15 @@ def validate_log_normal(df: pd.DataFrame) -> None:
 
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_PATH,"all_log_validation_features.png"))
+    plt.savefig(os.path.join(OUTPUT_PATH,"all_log_validation_features_aacount.png"))
 
     plt.show()
 
 
-def exploratory_analysis(df):
-    plot_histogram(df)
-    plot_boxplots(df)
-    correlation_heatmap(df)
-    validate_log_normal(df)
+def exploratory_analysis_account(df):
+    plot_histogram_account(df)
+    plot_boxplots_account(df)
+    correlation_heatmap_account(df)
+    validate_log_normal_account(df)
 
-    print("Task 2 done.")
-
+    print("Accoutn Detect Task 2 done.")
