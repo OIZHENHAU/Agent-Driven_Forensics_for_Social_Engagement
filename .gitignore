@@ -1,0 +1,32 @@
+# Environment variables - NEVER commit these
+.env
+*.env
+.env.*
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/settings.json
+
+# Output images (generated at runtime)
+backend/outputs/
+frontend/outputs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

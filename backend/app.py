@@ -7,9 +7,11 @@ import webbrowser
 
 import numpy as np
 import pandas as pd
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from backend.src.post_detect.p1_data_cleaning import (
@@ -30,6 +32,8 @@ from backend.src.post_detect.p4_ml_agent import (
     engineer_features, scale_features, train_isolation_forest, train_lof,
     find_best_threshold, plot_anomaly_results, plot_confusion_matrix, evaluate_model
 )
+from backend.src.account_detect.p4_fake_account_detection import predict_single_account
+from backend.utils.gemini_service import analyze_account_with_gemini
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
@@ -38,4 +42,21 @@ CORS(app)
 def index():
     return app.send_static_file('index.html')
 
+
+@app.post('/api/analyze-account')
+def analyze_account_endpoint():
+    data = request.get_json(force=True)
+    try:
+        result = predict_single_account(data)
+        try:
+            result['gemini_explanation'] = analyze_account_with_gemini(data)
+        except Exception as gemini_err:
+            result['gemini_explanation'] = f"(AI analysis unavailable: {gemini_err})"
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
 

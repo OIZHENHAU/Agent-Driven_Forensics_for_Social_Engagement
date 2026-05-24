@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Single Account Lookup - Clout Detective</title>
+  <link rel="stylesheet" href="../static/css/dashboard2.css" />
+</head>
+<body>
+
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div class="logo-text">Clout<br/>Detective</div>
+    </div>
+
+    <nav class="nav">
+      <a href="dashboard1.html" class="nav-item">
+        <span class="nav-dot"></span> Main Dashboard
+      </a>
+      <a href="dashboard2.html" class="nav-item active">
+        <span class="nav-dot active"></span> Single account Lookup
+      </a>
+      <a href="dashboard3.html" class="nav-item">
+        <span class="nav-dot"></span> Upload CSV
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      WIF3009 · Title 15<br/>
+      Unsupervised anomaly<br/>
+      detection
+    </div>
+  </aside>
+
+
+  <main class="main">
+    <h1 class="page-title">Single account lookup</h1>
+    <p class="page-subtitle">Enter metrics manually to score any account</p>
+
+    <div class="tabs">
+      <button class="tab active">Manual input</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">ACCOUNT METRICS</div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label>Followers</label>
+          <input type="number" id="followers" placeholder="e.g. 1200" min="0" />
+        </div>
+        <div class="field-group">
+          <label>Following</label>
+          <input type="number" id="follows" placeholder="e.g. 9800" min="0" />
+        </div>
+        <div class="field-group">
+          <label>Posts</label>
+          <input type="number" id="posts" placeholder="e.g. 8" min="0" />
+        </div>
+        <div class="field-group">
+          <label>Bio length (chars)</label>
+          <input type="number" id="description_length" placeholder="e.g. 12" min="0" />
+        </div>
+        <div class="field-group">
+          <label>Has profile picture?</label>
+          <select id="profile_pic">
+            <option value="1">Yes (1)</option>
+            <option value="0" selected>No (0)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Private account?</label>
+          <select id="private">
+            <option value="1">Yes (1)</option>
+            <option value="0" selected>No (0)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Has external URL?</label>
+          <select id="external_url">
+            <option value="1">Yes (1)</option>
+            <option value="0" selected>No (0)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Name equals username?</label>
+          <select id="name_equals_username">
+            <option value="1">Yes (1)</option>
+            <option value="0" selected>No (0)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Full name word count</label>
+          <input type="number" id="fullname_words" placeholder="e.g. 2" min="0" max="20" />
+        </div>
+      </div>
+    </div>
+
+  
+    <div class="card">
+      <div class="card-header">BEHAVIOUR SIGNALS</div>
+
+      <div class="slider-group">
+        <label>
+          Username number ratio (0-1)
+          <span class="help">- portion of digits in the username</span>
+        </label>
+        <div class="slider-row">
+          <input type="range" id="nums_length_username" min="0" max="1" step="0.01" value="0" />
+          <span class="slider-val" id="nums_username_val">0.00</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <label>
+          Full name number ratio (0-1)
+          <span class="help">- portion of digits in the full name</span>
+        </label>
+        <div class="slider-row">
+          <input type="range" id="nums_length_fullname" min="0" max="1" step="0.01" value="0" />
+          <span class="slider-val" id="nums_fullname_val">0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analyse button -->
+    <button class="analyse-btn" id="analyseBtn" onclick="analyseAccount()">Analyse account</button>
+
+    <!-- Loading state -->
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Analysing account — this may take a few seconds…</p>
+    </div>
+
+    <!-- Error state -->
+    <div id="errorBox" class="error-box hidden"></div>
+
+    <!-- Results -->
+    <div id="results" class="results hidden">
+
+      <div class="scores">
+        <div class="score-card">
+          <div class="score-num" id="if_score">-</div>
+          <div class="score-label">IF auth score</div>
+          <div class="score-status" id="if_status"></div>
+        </div>
+        <div class="score-card">
+          <div class="score-num" id="lof_score">-</div>
+          <div class="score-label">LOF auth score</div>
+          <div class="score-status" id="lof_status"></div>
+        </div>
+        <div class="score-card">
+          <div class="score-num" id="ensemble_score">-</div>
+          <div class="score-label">Ensemble score</div>
+          <div class="score-status" id="ensemble_status"></div>
+        </div>
+      </div>
+
+      <div class="verdict-banner" id="verdict_banner">
+        <div class="verdict-title" id="verdict_title"></div>
+        <div class="verdict-text"  id="verdict_text"></div>
+      </div>
+
+      <div class="gemini-card" id="gemini_section">
+        <div class="gemini-header">AI Forensic Analysis (Gemini)</div>
+        <div class="gemini-body" id="gemini_body"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="../static/js/dashboard2.js"></script>
+</body>
+</html>

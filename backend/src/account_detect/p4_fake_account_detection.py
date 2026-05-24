@@ -56,13 +56,7 @@ def scale_features(X_df):
 
 
 def train_isolation_forest(X_normal, X_all, contamination=0.45):
-    model = IsolationForest(
-        n_estimators=300,
-        contamination=contamination,
-        max_features=1.0,
-        random_state=42,
-        n_jobs=-1,
-    )
+    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42, n_jobs=-1)
     model.fit(X_normal)
     scores      = model.decision_function(X_all)
     predictions = model.predict(X_all)
@@ -72,22 +66,19 @@ def train_isolation_forest(X_normal, X_all, contamination=0.45):
 def train_lof(X_normal, X_all):
     model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", n_jobs=-1, contamination=0.5)
     model.fit(X_normal)
-    scores      = model.decision_function(X_all)
+    scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
     return predictions, scores
 
 
-# Scan full score range and find the threshold where recall is closest to the target
-# midpoint while staying in [target_lo, target_hi] and precision >= target_lo.
-# Falls back to the closest-to-midpoint solution if no such threshold exists.
 def find_best_threshold(y_true, scores, target_lo=0.70, target_hi=0.90):
     thresholds = np.linspace(scores.min(), scores.max(), 5000)
-    target_mid = (target_lo + target_hi) / 2.0  # 0.80
+    target_mid = (target_lo + target_hi) / 2.0
 
-    best_recall_near_mid      = None
+    best_recall_near_mid = None
     best_recall_near_mid_dist = float("inf")
-    best_fallback             = None
-    best_fallback_dist        = float("inf")
+    best_fallback = None
+    best_fallback_dist = float("inf")
 
     for thresh in thresholds:
         y_pred = (scores <= thresh).astype(int)
@@ -99,17 +90,17 @@ def find_best_threshold(y_true, scores, target_lo=0.70, target_hi=0.90):
         acc  = accuracy_score(y_true, y_pred)
         f1   = f1_score(y_true, y_pred, zero_division=0)
 
-        # Primary: recall in range, precision and accuracy at floor, recall as close to 80% as possible
+
         if target_lo <= rec <= target_hi and prec >= target_lo and acc >= target_lo:
             d = abs(rec - target_mid)
             if d < best_recall_near_mid_dist:
                 best_recall_near_mid_dist = d
-                best_recall_near_mid      = (thresh, prec, rec, acc, f1, y_pred)
+                best_recall_near_mid = (thresh, prec, rec, acc, f1, y_pred)
 
         dist = (prec - target_mid) ** 2 + (rec - target_mid) ** 2 + (acc - target_mid) ** 2
         if dist < best_fallback_dist:
             best_fallback_dist = dist
-            best_fallback      = (thresh, prec, rec, acc, f1, y_pred)
+            best_fallback = (thresh, prec, rec, acc, f1, y_pred)
 
     return best_recall_near_mid if best_recall_near_mid else best_fallback
 
@@ -155,19 +146,17 @@ def evaluate_model(y_true, y_pred, model_name):
 
 
 def main(df):
-    y_true = df["fake"].values  # 1 = fake account, 0 = real account
+    y_true = df["fake"].values
 
-    X_eng    = engineer_features(df)
+    X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    # Train only on verified-real accounts so the models learn "normal" behaviour
     mask_normal = (df["fake"] == 0).values
-    X_normal    = X_scaled[mask_normal]
+    X_normal = X_scaled[mask_normal]
 
-    # Contamination = proportion of fakes in the full set, capped at 0.45 for IF
     actual_contamination = float(np.clip(y_true.mean(), 0.05, 0.45))
 
-    # ── Isolation Forest ────────────────────────────────────────────────────────
+    # Train Isolation Forest
     if_preds, if_scores = train_isolation_forest(X_normal, X_scaled, contamination=actual_contamination)
 
     print("\nIsolation Forest raw predictions")
@@ -176,14 +165,12 @@ def main(df):
 
     if_best = find_best_threshold(y_true, if_scores)
     thresh, prec, rec, acc, f1, if_y_pred = if_best
-    in_range = 0.70 <= prec <= 0.90 and 0.70 <= rec <= 0.90 and 0.70 <= acc <= 0.90
-    label    = "In-range" if in_range else "Best-available"
-    print(f"[IF] {label} threshold={thresh:.4f}  Accuracy={acc:.4f}  Precision={prec:.4f}  Recall={rec:.4f}  F1={f1:.4f}")
-
+    
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
     evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
-    # ── Local Outlier Factor ─────────────────────────────────────────────────────
+
+    # Train Local Outlier Factor 
     lof_preds, lof_scores = train_lof(X_normal, X_scaled)
 
     print("\nLOF raw predictions")
@@ -192,9 +179,7 @@ def main(df):
 
     lof_best = find_best_threshold(y_true, lof_scores)
     thresh, prec, rec, acc, f1, lof_y_pred = lof_best
-    in_range = 0.70 <= prec <= 0.90 and 0.70 <= rec <= 0.90 and 0.70 <= acc <= 0.90
-    label    = "In-range" if in_range else "Best-available"
-    print(f"[LOF] {label} threshold={thresh:.4f}  Accuracy={acc:.4f}  Precision={prec:.4f}  Recall={rec:.4f}  F1={f1:.4f}")
+
 
     plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
     evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
@@ -203,4 +188,73 @@ def main(df):
 
 
 # training_model_account = main
+
+
+def predict_single_account(raw_input: dict) -> dict:
+    """
+    Train IF + LOF on the full cleaned dataset, then score one new account.
+    Returns authenticity scores 0-100 (higher = more authentic).
+    """
+    df = pd.read_csv(CLEAN_PATH)
+    y_true = df["fake"].values
+
+    single_row = pd.DataFrame([{
+        "profile pic":          int(raw_input.get("profile_pic", 0)),
+        "nums/length username": float(raw_input.get("nums_length_username", 0)),
+        "fullname words":       int(raw_input.get("fullname_words", 1)),
+        "nums/length fullname": float(raw_input.get("nums_length_fullname", 0)),
+        "name==username":       int(raw_input.get("name_equals_username", 0)),
+        "description length":   int(raw_input.get("description_length", 0)),
+        "external URL":         int(raw_input.get("external_url", 0)),
+        "private":              int(raw_input.get("private", 0)),
+        "#posts":               int(raw_input.get("posts", 0)),
+        "#followers":           int(raw_input.get("followers", 0)),
+        "#follows":             int(raw_input.get("follows", 0)),
+    }])
+
+    df_features = df.drop(columns=["fake"])
+    df_combined = pd.concat([df_features, single_row], ignore_index=True)
+
+    X_eng    = engineer_features(df_combined)
+    scaler   = StandardScaler()
+    X_scaled = scaler.fit_transform(X_eng)
+
+    # X_scaled has len(df)+1 rows (training data + the single new account).
+    # y_true only covers the training rows, so slice before applying the mask.
+    mask_normal           = (y_true == 0)
+    X_normal              = X_scaled[:len(df)][mask_normal]
+    actual_contamination  = float(np.clip(y_true.mean(), 0.05, 0.45))
+
+    # Isolation Forest
+    if_model = IsolationForest(
+        n_estimators=300, contamination=actual_contamination,
+        max_features=1.0, random_state=42, n_jobs=-1,
+    )
+    if_model.fit(X_normal)
+    if_scores = if_model.decision_function(X_scaled)
+
+    # Local Outlier Factor
+    lof_model = LocalOutlierFactor(
+        n_neighbors=20, novelty=True, metric="euclidean",
+        n_jobs=-1, contamination=0.5,
+    )
+    lof_model.fit(X_normal)
+    lof_scores = lof_model.decision_function(X_scaled)
+
+    def to_auth_score(score, all_scores):
+        s_min, s_max = all_scores.min(), all_scores.max()
+        if s_max == s_min:
+            return 50
+        return int(np.clip((score - s_min) / (s_max - s_min) * 100, 0, 100))
+
+    if_auth       = to_auth_score(if_scores[-1],  if_scores)
+    lof_auth      = to_auth_score(lof_scores[-1], lof_scores)
+    ensemble      = int(round(0.6 * if_auth + 0.4 * lof_auth))
+
+    return {
+        "if_score":       if_auth,
+        "lof_score":      lof_auth,
+        "ensemble_score": ensemble,
+        "verdict":        "Authentic" if ensemble >= 50 else "Suspicious",
+    }
 
