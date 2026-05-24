@@ -10,9 +10,9 @@ def main():
     # Task 2
     exploratory_analysis(cleaned_df)
     # Task 3
-    pca, X_pca = perform_PCA(cleaned_df)
+    perform_PCA(cleaned_df)
     # Task 4
-    train_model(X_pca, cleaned_df)
+    train_model(cleaned_df)
 
 
 if __name__ == "__main__":
