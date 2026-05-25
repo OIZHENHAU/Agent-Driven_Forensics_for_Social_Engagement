@@ -164,7 +164,6 @@ def main(df):
     mask_normal = df["performance_bucket_label"].isin(["low", "high"])
     X_normal = X_scaled[mask_normal]
 
-    # Match contamination to the actual viral rate so IF can flag enough anomalies
     actual_contamination = float(np.clip(y_true.mean(), 0.05, 0.45))
 
     # Train Isolation Forest Model

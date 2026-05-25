@@ -119,9 +119,7 @@ def plot_anomaly_results(predictions, title):
 def plot_confusion_matrix(y_true, y_pred, title):
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=["Real", "Fake"],
-                yticklabels=["Real", "Fake"])
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["Real", "Fake"], yticklabels=["Real", "Fake"])
     plt.title(title)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
@@ -130,15 +128,15 @@ def plot_confusion_matrix(y_true, y_pred, title):
 
 
 def evaluate_model(y_true, y_pred, model_name):
-    accuracy  = accuracy_score(y_true, y_pred)
+    accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred, zero_division=0)
-    recall    = recall_score(y_true, y_pred, zero_division=0)
-    f1        = f1_score(y_true, y_pred, zero_division=0)
+    recall = recall_score(y_true, y_pred, zero_division=0)
+    f1 = f1_score(y_true, y_pred, zero_division=0)
 
     print(f"\n######## {model_name} Evaluation ##########")
     print(f"Accuracy : {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
-    print(f"Recall   : {recall:.4f}")
+    print(f"Recall : {recall:.4f}")
     print(f"F1 Score : {f1:.4f}")
     print()
 
@@ -189,72 +187,54 @@ def main(df):
 
 # training_model_account = main
 
-
+# Train all the IsoaltionForest and LOF model on the cleaned dataset
 def predict_single_account(raw_input: dict) -> dict:
-    """
-    Train IF + LOF on the full cleaned dataset, then score one new account.
-    Returns authenticity scores 0-100 (higher = more authentic).
-    """
     df = pd.read_csv(CLEAN_PATH)
-    y_true = df["fake"].values
 
     single_row = pd.DataFrame([{
-        "profile pic":          int(raw_input.get("profile_pic", 0)),
+        "profile pic": int(raw_input.get("profile_pic", 0)),
         "nums/length username": float(raw_input.get("nums_length_username", 0)),
-        "fullname words":       int(raw_input.get("fullname_words", 1)),
+        "fullname words": int(raw_input.get("fullname_words", 1)),
         "nums/length fullname": float(raw_input.get("nums_length_fullname", 0)),
-        "name==username":       int(raw_input.get("name_equals_username", 0)),
-        "description length":   int(raw_input.get("description_length", 0)),
-        "external URL":         int(raw_input.get("external_url", 0)),
-        "private":              int(raw_input.get("private", 0)),
-        "#posts":               int(raw_input.get("posts", 0)),
-        "#followers":           int(raw_input.get("followers", 0)),
-        "#follows":             int(raw_input.get("follows", 0)),
+        "name==username": int(raw_input.get("name_equals_username", 0)),
+        "description length": int(raw_input.get("description_length", 0)),
+        "external URL": int(raw_input.get("external_url", 0)),
+        "private": int(raw_input.get("private", 0)),
+        "#posts": int(raw_input.get("posts", 0)),
+        "#followers": int(raw_input.get("followers", 0)),
+        "#follows": int(raw_input.get("follows", 0)),
     }])
 
     df_features = df.drop(columns=["fake"])
     df_combined = pd.concat([df_features, single_row], ignore_index=True)
 
-    X_eng    = engineer_features(df_combined)
-    scaler   = StandardScaler()
+    X_eng = engineer_features(df_combined)
+    scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_eng)
 
-    # X_scaled has len(df)+1 rows (training data + the single new account).
-    # y_true only covers the training rows, so slice before applying the mask.
-    mask_normal           = (y_true == 0)
-    X_normal              = X_scaled[:len(df)][mask_normal]
-    actual_contamination  = float(np.clip(y_true.mean(), 0.05, 0.45))
+    CONTAMINATION = 0.5
+    X_train = X_scaled[:len(df)]
 
-    # Isolation Forest
-    if_model = IsolationForest(
-        n_estimators=300, contamination=actual_contamination,
-        max_features=1.0, random_state=42, n_jobs=-1,
-    )
-    if_model.fit(X_normal)
+    # Train Isolation Forest on input data
+    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42, n_jobs=-1)
+    if_model.fit(X_train)
     if_scores = if_model.decision_function(X_scaled)
 
-    # Local Outlier Factor
-    lof_model = LocalOutlierFactor(
-        n_neighbors=20, novelty=True, metric="euclidean",
-        n_jobs=-1, contamination=0.5,
-    )
-    lof_model.fit(X_normal)
-    lof_scores = lof_model.decision_function(X_scaled)
+    # Train LOF on the input data
+    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", n_jobs=-1, contamination=CONTAMINATION)
+    lof_model.fit(X_train)
+    lof_train_scores = lof_model.decision_function(X_train)
+    lof_new_score = float(lof_model.decision_function(X_scaled[-1:])[0])
 
-    def to_auth_score(score, all_scores):
-        s_min, s_max = all_scores.min(), all_scores.max()
+    def to_auth_score(score, ref_scores):
+        s_min, s_max = ref_scores.min(), ref_scores.max()
         if s_max == s_min:
             return 50
-        return int(np.clip((score - s_min) / (s_max - s_min) * 100, 0, 100))
+        return int(np.clip((score - s_min) / (s_max - s_min) * 100, 1, 100))
 
-    if_auth       = to_auth_score(if_scores[-1],  if_scores)
-    lof_auth      = to_auth_score(lof_scores[-1], lof_scores)
-    ensemble      = int(round(0.6 * if_auth + 0.4 * lof_auth))
+    if_auth = to_auth_score(if_scores[-1], if_scores[:len(df)])
+    lof_auth = to_auth_score(lof_new_score, lof_train_scores)
+    ensemble = int(round(0.6 * if_auth + 0.4 * lof_auth))
 
-    return {
-        "if_score":       if_auth,
-        "lof_score":      lof_auth,
-        "ensemble_score": ensemble,
-        "verdict":        "Authentic" if ensemble >= 50 else "Suspicious",
-    }
+    return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, "verdict": "Authentic" if ensemble >= 50 else "Suspicious"}
 

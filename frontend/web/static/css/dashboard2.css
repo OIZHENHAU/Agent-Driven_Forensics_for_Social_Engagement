@@ -83,7 +83,6 @@ body {
   border-top: 1px solid #222840;
 }
 
-/* ── Main ────────────────────────────────────────────────── */
 .main {
   margin-left: 200px;
   flex: 1;
@@ -109,7 +108,6 @@ body {
   cursor: pointer;
 }
 
-/* ── Cards ───────────────────────────────────────────────── */
 .card {
   background: #fff;
   border-radius: 14px;
@@ -162,7 +160,6 @@ body {
   box-shadow: 0 0 0 2px rgba(224,92,122,0.3);
 }
 
-/* ── Sliders ─────────────────────────────────────────────── */
 .slider-group { margin-bottom: 20px; }
 .slider-group:last-child { margin-bottom: 0; }
 
@@ -217,7 +214,6 @@ input[type="range"]::-moz-range-thumb {
   color: #374151;
 }
 
-/* ── Analyse button ──────────────────────────────────────── */
 .analyse-btn {
   width: 100%;
   padding: 16px;
@@ -312,7 +308,6 @@ input[type="range"]::-moz-range-thumb {
 
 .score-status.authentic { color: #16a34a; }
 
-/* ── Verdict banner ──────────────────────────────────────── */
 .verdict-banner {
   border-radius: 12px;
   padding: 18px 24px;
