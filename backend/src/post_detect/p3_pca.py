@@ -29,18 +29,16 @@ def load_dataset():
 
 # Select all numerical features
 def select_features(df):
-    
-    numerical_columns = (df.select_dtypes(include='number').columns)
-    # Columns to remove
-    drop_columns = ["account_id", "post_id"]
+    numerical_columns = df.select_dtypes(include='number').columns
 
-    # Keep only useful features
-    features = [col for col in numerical_columns if col not in drop_columns]
+    drop_columns = {"is_fake", "activity_id", "user_id", "timestamp", "content"}
 
-    X = df[features]
+    importance_features = [col for col in numerical_columns if col not in drop_columns]
 
-    print("\nSelected Features:")
-    print(features)
+    X = df[importance_features]
+
+    print("\nSelected Features for PCA:")
+    print(importance_features)
 
     return X
 
@@ -75,9 +73,9 @@ def plot_pca_scatter(X_pca, df):
 
     plt.figure(figsize=(10, 6))
 
-    labels = df["performance_bucket_label"].values
-    unique_labels = ["low", "medium", "high", "viral"]
-    colors = ["#d62728", "#ff7f0e", "#2ca02c", "#1f77b4"]
+    labels = df["is_fake"].values
+    unique_labels = [1, 0]
+    colors = ["#d62728", "#2ca02c"]
 
     for label, color in zip(unique_labels, colors):
         mask = labels == label
@@ -86,7 +84,7 @@ def plot_pca_scatter(X_pca, df):
 
     plt.xlabel("Principal Component 1")
     plt.ylabel("Principal Component 2")
-    plt.title("PCA Projection (colored by performance bucket)")
+    plt.title("PCA Projection (colored by REAL vs FAKE Post)")
     plt.legend(title="Performance", markerscale=3)
     plt.savefig(os.path.join(OUTPUT_DIR, "pca_projection_post.png"), dpi=150)
     plt.show()

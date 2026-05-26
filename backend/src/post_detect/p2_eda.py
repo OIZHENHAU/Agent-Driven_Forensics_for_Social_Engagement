@@ -15,7 +15,7 @@ from sklearn.inspection import permutation_importance
 from scipy.stats import skew
 
 # Get Raw Data from File Path
-RAW_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "Instagram_Analytics.csv")
+RAW_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "raw_user_activities.csv")
 # The csv file path after data cleaning
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_data.csv")
 # Get the output directory
@@ -93,7 +93,9 @@ def plot_boxplots(df: pd.DataFrame) -> None:
 # PLlot correlation heatmap diagram
 def correlation_heatmap(df):
 
+    # Drop zero-variance columns
     numeric_columns = df.select_dtypes(include=np.number)
+    numeric_columns = numeric_columns.loc[:, numeric_columns.std() > 0]
 
     correlation_matrix = numeric_columns.corr()
 
@@ -115,12 +117,12 @@ def validate_log_normal(df: pd.DataFrame) -> None:
     valid_columns = []
     skipped_columns = []
 
-    # Check which columns are safe
+    # Check which columns are safe watch out for non-zero variance for skewness
     for col in numeric_columns:
 
         min_value = df[col].min()
 
-        if min_value > -1:
+        if min_value > -1 and df[col].std() > 0:
             valid_columns.append(col)
         else:
             skipped_columns.append(col)

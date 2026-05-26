@@ -27,6 +27,7 @@ from src.post_detect.p4_ml_agent import (engineer_features, scale_features, trai
 
 from src.account_detect.p4_fake_account_detection import predict_single_account
 from utils.gemini_service import analyze_account_with_gemini
+from pipeline import main as run_pipeline
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
@@ -54,5 +55,8 @@ def analyze_account_endpoint():
 
 
 if __name__ == '__main__':
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        threading.Thread(target=run_pipeline, daemon=True).start()
+        
     app.run(debug=True, port=5000)
 
