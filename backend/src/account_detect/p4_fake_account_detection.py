@@ -152,33 +152,27 @@ def main(df):
     mask_normal = (df["fake"] == 0).values
     X_normal = X_scaled[mask_normal]
 
-    actual_contamination = float(np.clip(y_true.mean(), 0.05, 0.45))
+    contamination = 0.5
 
     # Train Isolation Forest
-    if_preds, if_scores = train_isolation_forest(X_normal, X_scaled, contamination=actual_contamination)
+    if_preds, _ = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
 
     print("\nIsolation Forest raw predictions")
     print(pd.Series(if_preds).value_counts())
     plot_anomaly_results(if_preds, "Isolation_Forest_Result")
 
-    if_best = find_best_threshold(y_true, if_scores)
-    thresh, prec, rec, acc, f1, if_y_pred = if_best
-    
+    if_y_pred = (if_preds == -1).astype(int)
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
     evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
-
-    # Train Local Outlier Factor 
-    lof_preds, lof_scores = train_lof(X_normal, X_scaled)
+    # Train Local Outlier Factor
+    lof_preds, _ = train_lof(X_normal, X_scaled)
 
     print("\nLOF raw predictions")
     print(pd.Series(lof_preds).value_counts())
     plot_anomaly_results(lof_preds, "LOF_Result")
 
-    lof_best = find_best_threshold(y_true, lof_scores)
-    thresh, prec, rec, acc, f1, lof_y_pred = lof_best
-
-
+    lof_y_pred = (lof_preds == -1).astype(int)
     plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
     evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
 

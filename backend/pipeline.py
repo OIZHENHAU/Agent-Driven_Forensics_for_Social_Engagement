@@ -22,13 +22,13 @@ def main():
 
     '''Account Detection'''
     # Task 1
-    # cleaned_account_df = clean_dataset_account()
+    cleaned_account_df = clean_dataset_account()
     # Task 2
-    # exploratory_analysis_account(cleaned_account_df)
+    exploratory_analysis_account(cleaned_account_df)
     #Task 3
-    # perform_PCA_account(cleaned_account_df)
+    perform_PCA_account(cleaned_account_df)
     #Task 4
-    # training_model_account(cleaned_account_df)
+    training_model_account(cleaned_account_df)
 
 
 if __name__ == "__main__":

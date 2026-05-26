@@ -32,12 +32,19 @@ def engineer_features(df):
     eps = 1e-6
     features = pd.DataFrame(index=df.index)
 
+    # Exclude label-encoded categoricals
+    encoded_categoricals = {
+        "is_fake", "activity_id", "user_id",
+        "post_country", "post_region", "post_city",
+        "device", "platform", "media_type", "content_type", "language",
+    }
+
     # Get all numerical columns
     numerical_columns = (df.select_dtypes(include='number').columns)
 
-    # Raw numeric signals
+    # Raw numeric signals (skip encoded categoricals)
     for col in numerical_columns:
-        if col in df.columns:
+        if col in df.columns and col not in encoded_categoricals:
             features[col] = df[col].astype(float)
 
     # Engagement ratios
@@ -78,7 +85,7 @@ def train_isolation_forest(X_normal, X_all, contamination=0.45):
     return model, predictions, scores
 
 
-def train_lof(X_normal, X_all, contamination=0.45):
+def train_lof(X_normal, X_all, contamination=0.35):
     model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination, n_jobs=-1)
     model.fit(X_normal)
     scores = model.decision_function(X_all)
@@ -198,32 +205,30 @@ def main(df):
     mask_normal = ~df["is_fake"].astype(bool)
     X_normal = X_scaled[mask_normal]
 
-    contamination = 0.5
+    contamination = 0.35
 
     # Train Isolation Forest model
-    if_model, if_preds, if_scores = train_isolation_forest(X_normal, X_scaled, contamination)
+    if_model, if_preds, _ = train_isolation_forest(X_normal, X_scaled, contamination)
 
     print("\nIsolation Forest raw predictions")
     print(pd.Series(if_preds).value_counts())
     plot_anomaly_results(if_preds, "Isolation_Forest_Result")
     plot_feature_importance(if_model, list(X_eng.columns), "Feature_Importance_IF")
 
-    if_best = find_best_threshold(y_true, if_scores)
-    thresh, prec, rec, f1, if_y_pred = if_best
-
+    # Convert raw predictions whre -1 (anomaly) means 1 (fake), and 1 (normal) means 0 (real)
+    if_y_pred = (if_preds == -1).astype(int)
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
     evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
-    # Train the Local Outlier Factor model 
-    lof_preds, lof_scores = train_lof(X_normal, X_scaled, contamination)
+    # Train the Local Outlier Factor model
+    lof_preds, _ = train_lof(X_normal, X_scaled, contamination)
 
     print("\nLOF raw predictions")
     print(pd.Series(lof_preds).value_counts())
     plot_anomaly_results(lof_preds, "LOF_Result")
 
-    lof_best = find_best_threshold(y_true, lof_scores)
-    thresh, prec, rec, f1, lof_y_pred = lof_best
-
+    # Convert raw predictions whre -1 (anomaly) means 1 (fake), and 1 (normal) means 0 (real)
+    lof_y_pred = (lof_preds == -1).astype(int)
     plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
     evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
 
