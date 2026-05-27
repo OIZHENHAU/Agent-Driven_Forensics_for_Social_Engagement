@@ -94,36 +94,6 @@ def train_lof(X_normal, X_all, contamination=0.35):
     return predictions, scores
 
 
-def find_best_threshold(y_true, scores, target_lo=0.70, target_hi=0.90):
-    thresholds  = np.linspace(scores.min(), scores.max(), 3000)
-    target_mid  = (target_lo + target_hi) / 2.0
-
-    best_primary = None
-    best_primary_f1 = 0.0
-    best_fallback = None
-    best_fallback_dist = float("inf")
-
-    for thresh in thresholds:
-        y_pred = (scores <= thresh).astype(int)
-        if y_pred.sum() == 0:
-            continue
-
-        prec = precision_score(y_true, y_pred, zero_division=0)
-        rec = recall_score(y_true, y_pred, zero_division=0)
-        f1 = f1_score(y_true, y_pred, zero_division=0)
-
-        if target_lo <= prec <= target_hi and target_lo <= rec <= target_hi:
-            if f1 > best_primary_f1:
-                best_primary_f1 = f1
-                best_primary = (thresh, prec, rec, f1, y_pred)
-
-        dist = (prec - target_mid) ** 2 + (rec - target_mid) ** 2
-        if dist < best_fallback_dist:
-            best_fallback_dist = dist
-            best_fallback = (thresh, prec, rec, f1, y_pred)
-
-    return best_primary if best_primary else best_fallback
-
 # Derives feature importance from IsolationForest by counting how many time 
 # each feature is used as a split node across all trees, the more it splits, the more useeful the features is.
 def plot_feature_importance(if_model, feature_names, title="Feature_Importance_IF"):

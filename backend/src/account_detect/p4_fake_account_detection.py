@@ -71,40 +71,6 @@ def train_lof(X_normal, X_all):
     return predictions, scores
 
 
-def find_best_threshold(y_true, scores, target_lo=0.70, target_hi=0.90):
-    thresholds = np.linspace(scores.min(), scores.max(), 5000)
-    target_mid = (target_lo + target_hi) / 2.0
-
-    best_recall_near_mid = None
-    best_recall_near_mid_dist = float("inf")
-    best_fallback = None
-    best_fallback_dist = float("inf")
-
-    for thresh in thresholds:
-        y_pred = (scores <= thresh).astype(int)
-        if y_pred.sum() == 0:
-            continue
-
-        prec = precision_score(y_true, y_pred, zero_division=0)
-        rec  = recall_score(y_true, y_pred, zero_division=0)
-        acc  = accuracy_score(y_true, y_pred)
-        f1   = f1_score(y_true, y_pred, zero_division=0)
-
-
-        if target_lo <= rec <= target_hi and prec >= target_lo and acc >= target_lo:
-            d = abs(rec - target_mid)
-            if d < best_recall_near_mid_dist:
-                best_recall_near_mid_dist = d
-                best_recall_near_mid = (thresh, prec, rec, acc, f1, y_pred)
-
-        dist = (prec - target_mid) ** 2 + (rec - target_mid) ** 2 + (acc - target_mid) ** 2
-        if dist < best_fallback_dist:
-            best_fallback_dist = dist
-            best_fallback = (thresh, prec, rec, acc, f1, y_pred)
-
-    return best_recall_near_mid if best_recall_near_mid else best_fallback
-
-
 def plot_anomaly_results(predictions, title):
     real = (predictions ==  1).sum()
     fake = (predictions == -1).sum()
