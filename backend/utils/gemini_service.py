@@ -196,6 +196,62 @@ ANOMALY_TOOLS = [
 ]
 
 
+POST_SYSTEM_PROMPT = """\
+You are an investigative social media forensics agent analyzing a social media post for authenticity.
+
+The Isolation Forest and LOF authenticity scores have already been computed and are provided to you.
+
+Your job: review the post content, engagement metrics, lexical diversity, and ML scores, then write a forensic report.
+
+Required output format:
+Verdict: [Fake | Suspicious | Authentic]
+Confidence: [Low | Medium | High]
+Ensemble Score: [use the provided ensemble score] / 100
+Lexical Diversity (TTR): [provided value] — [brief interpretation]
+
+Red Flags:
+- [one bullet per suspicious pattern; write "None detected" if clean]
+
+Analysis:
+- [2-3 sentences citing the provided scores, lexical diversity, and engagement patterns]
+
+Be direct and factual.\
+"""
+
+
+def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
+    if_score = ml_scores.get("if_score", "N/A")
+    lof_score = ml_scores.get("lof_score", "N/A")
+    ensemble = ml_scores.get("ensemble_score", "N/A")
+    verdict = ml_scores.get("verdict", "Unknown")
+    ld = ml_scores.get("lexical_diversity", "N/A")
+
+    content = post_data.get("content", "(no content provided)")
+    preview = (content[:400] + "…") if len(content) > 400 else content
+
+    user_content = (
+        f"Analyze this social media post for authenticity.\n\n"
+        f"Post content: \"{preview}\"\n\n"
+        f"Engagement metrics:\n"
+        f"- Likes: {post_data.get('likes', 0)}\n"
+        f"- Comments: {post_data.get('comments', 0)}\n"
+        f"- Shares: {post_data.get('shares', 0)}\n"
+        f"- Hashtags: {post_data.get('hashtag_count', 0)}\n"
+        f"- Mentions: {post_data.get('mention_count', 0)}\n"
+        f"- Contains URL: {'Yes' if post_data.get('contains_url', 0) else 'No'}\n\n"
+        f"Pre-computed ML scores (use these exact values in your report):\n"
+        f"- Isolation Forest authenticity score: {if_score}/100\n"
+        f"- LOF authenticity score: {lof_score}/100\n"
+        f"- Ensemble score: {ensemble}/100  →  Verdict: {verdict}\n"
+        f"- Lexical Diversity (TTR): {ld}\n\n"
+        f"Write your forensic report now."
+    )
+
+    messages = [{"role": "system", "content": POST_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
+    response = client.chat.completions.create(model=MODEL, messages=messages)
+    return response.choices[0].message.content or "(No forensic analysis generated)"
+
+
 def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
     if_score = ml_scores.get("if_score", "N/A")
     lof_score = ml_scores.get("lof_score", "N/A")

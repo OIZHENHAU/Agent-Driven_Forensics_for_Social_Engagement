@@ -37,107 +37,207 @@
 
   <main class="main">
     <h1 class="page-title">Single account lookup</h1>
-    <p class="page-subtitle">Enter metrics manually to score any account</p>
+    <p class="page-subtitle">Enter metrics manually to score any account or post</p>
 
     <div class="tabs">
-      <button class="tab active">Manual input</button>
+      <button class="tab active" id="tab-account" onclick="switchTab('account')">Manual input</button>
+      <button class="tab" id="tab-post" onclick="switchTab('post')">Post input</button>
     </div>
 
-    <div class="card">
-      <div class="card-header">ACCOUNT METRICS</div>
-      <div class="field-grid">
-        <div class="field-group">
-          <label>Followers</label>
-          <input type="number" id="followers" placeholder="e.g. 1200" min="0" />
-        </div>
-        <div class="field-group">
-          <label>Following</label>
-          <input type="number" id="follows" placeholder="e.g. 9800" min="0" />
-        </div>
-        <div class="field-group">
-          <label>Posts</label>
-          <input type="number" id="posts" placeholder="e.g. 8" min="0" />
-        </div>
-        <div class="field-group">
-          <label>Bio length (chars)</label>
-          <input type="number" id="description_length" placeholder="e.g. 12" min="0" />
-        </div>
-        <div class="field-group">
-          <label>Has profile picture?</label>
-          <select id="profile_pic">
-            <option value="1">Yes</option>
-            <option value="0" selected>No</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Private account?</label>
-          <select id="private">
-            <option value="1">Yes</option>
-            <option value="0" selected>No</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Has external URL?</label>
-          <select id="external_url">
-            <option value="1">Yes</option>
-            <option value="0" selected>No</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Name equals username?</label>
-          <select id="name_equals_username">
-            <option value="1">Yes</option>
-            <option value="0" selected>No</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Full name word count</label>
-          <input type="number" id="fullname_words" placeholder="e.g. 2" min="0" max="20" />
-        </div>
-      </div>
-    </div>
-
-  
-    <div class="card">
-      <div class="card-header">BEHAVIOUR SIGNALS</div>
-
-      <div class="slider-group">
-        <label>
-          Username number ratio (0-1)
-          <span class="help">- portion of digits in the username</span>
-        </label>
-        <div class="slider-row">
-          <input type="range" id="nums_length_username" min="0" max="1" step="0.01" value="0" />
-          <span class="slider-val" id="nums_length_username_val">0.00</span>
+    <%# Account Manual Input Section %>
+    <div id="section-account">
+      <div class="card">
+        <div class="card-header">ACCOUNT METRICS</div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label>Followers</label>
+            <input type="number" id="followers" placeholder="e.g. 1200" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Following</label>
+            <input type="number" id="follows" placeholder="e.g. 9800" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Posts</label>
+            <input type="number" id="posts" placeholder="e.g. 8" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Bio length (chars)</label>
+            <input type="number" id="description_length" placeholder="e.g. 12" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Has profile picture?</label>
+            <select id="profile_pic">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Private account?</label>
+            <select id="private">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Has external URL?</label>
+            <select id="external_url">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Name equals username?</label>
+            <select id="name_equals_username">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Full name word count</label>
+            <input type="number" id="fullname_words" placeholder="e.g. 2" min="0" max="20" />
+          </div>
         </div>
       </div>
 
-      <div class="slider-group">
-        <label>
-          Full name number ratio (0-1)
-          <span class="help">- portion of digits in the full name</span>
-        </label>
-        <div class="slider-row">
-          <input type="range" id="nums_length_fullname" min="0" max="1" step="0.01" value="0" />
-          <span class="slider-val" id="nums_length_fullname_val">0.00</span>
+      <div class="card">
+        <div class="card-header">BEHAVIOUR SIGNALS</div>
+
+        <div class="slider-group">
+          <label>
+            Username number ratio (0-1)
+            <span class="help">- portion of digits in the username</span>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="nums_length_username" min="0" max="1" step="0.01" value="0" />
+            <span class="slider-val" id="nums_length_username_val">0.00</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <label>
+            Full name number ratio (0-1)
+            <span class="help">- portion of digits in the full name</span>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="nums_length_fullname" min="0" max="1" step="0.01" value="0" />
+            <span class="slider-val" id="nums_length_fullname_val">0.00</span>
+          </div>
         </div>
       </div>
+
+      <button class="analyse-btn" id="analyseBtn" onclick="analyseAccount()">Analyse account</button>
     </div>
 
-    <!-- Analyse button -->
-    <button class="analyse-btn" id="analyseBtn" onclick="analyseAccount()">Analyse account</button>
+    <%# Post Manual Input Section %>
+    <div id="section-post" class="hidden">
 
-    <!-- Loading state -->
+      <div class="card">
+        <div class="card-header">POST CONTENT</div>
+        <div class="field-group">
+          <label>Comment / Post text <span class="help">— lexical diversity is calculated automatically</span></label>
+          <textarea id="post_content" placeholder="Enter the post or comment text here…" rows="5"></textarea>
+        </div>
+        <div class="ld-row">
+          <span class="ld-label">Lexical Diversity (TTR)</span>
+          <span class="ld-badge" id="lexical_diversity_live">0.000</span>
+          <span class="ld-hint">· unique words ÷ total words &nbsp;·&nbsp; 0 = repetitive &nbsp;·&nbsp; 1 = all unique</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">ENGAGEMENT METRICS</div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label>Likes</label>
+            <input type="number" id="post_likes" placeholder="e.g. 120" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Comments</label>
+            <input type="number" id="post_comments" placeholder="e.g. 8" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Shares</label>
+            <input type="number" id="post_shares" placeholder="e.g. 5" min="0" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">CONTENT SIGNALS</div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label>Hashtag count</label>
+            <input type="number" id="hashtag_count" placeholder="e.g. 3" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Mention count</label>
+            <input type="number" id="mention_count" placeholder="e.g. 1" min="0" />
+          </div>
+          <div class="field-group">
+            <label>Contains URL?</label>
+            <select id="post_contains_url">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Has media?</label>
+            <select id="has_media">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">POST TIMING</div>
+        <div class="field-grid" style="margin-bottom: 20px;">
+          <div class="field-group">
+            <label>Day of week</label>
+            <select id="day_of_week">
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+              <option value="5">Saturday</option>
+              <option value="6">Sunday</option>
+            </select>
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>
+            Hour of day (0–23)
+            <span class="help">- posting time</span>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="hour_of_day" min="0" max="23" step="1" value="12" />
+            <span class="slider-val" id="hour_of_day_val">12</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="analyse-btn" id="analysePostBtn" onclick="analysePost()">Analyse post</button>
+    </div>
+
+    <%# Loafing page section %>
     <div id="loading" class="loading hidden">
       <div class="spinner"></div>
-      <p>Analysing account — this may take a few seconds…</p>
+      <p>Analysing — this may take a few seconds…</p>
     </div>
 
-    <!-- Error state -->
     <div id="errorBox" class="error-box hidden"></div>
 
-    <!-- Results -->
     <div id="results" class="results hidden">
+
+      <%# Lexical diversity highlight %>
+      <div id="ld_section" class="ld-result-card hidden">
+        <span class="ld-result-label">Lexical Diversity (TTR)</span>
+        <span class="ld-result-score" id="ld_result_score">-</span>
+        <span class="ld-result-desc">Unique words ÷ total words &nbsp;·&nbsp; higher = more varied vocabulary</span>
+      </div>
 
       <div class="scores">
         <div class="score-card">

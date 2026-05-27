@@ -92,19 +92,30 @@ body {
 .page-title    { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
 .page-subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
 
-/* ── Tabs ────────────────────────────────────────────────── */
+
 .tabs { margin-bottom: 20px; border-bottom: 1px solid #e2ddd6; }
 
 .tab {
   background: none;
   border: none;
-  border-bottom: 2px solid #e05c7a;
+  border-bottom: 2px solid transparent;
   padding: 8px 0;
+  margin-right: 28px;
   margin-bottom: -1px;
   font-size: 14px;
   font-weight: 600;
-  color: #e05c7a;
+  color: #6b7280;
   cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover:not(.active) { 
+  color: #374151; 
+}
+
+.tab.active {
+  border-bottom-color: #e05c7a;
+  color: #e05c7a;
 }
 
 .card {
@@ -124,7 +135,7 @@ body {
   margin-bottom: 18px;
 }
 
-/* ── Field grid ──────────────────────────────────────────── */
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -235,10 +246,9 @@ input[type="range"]::-moz-range-thumb {
 
 .analyse-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ── Visibility helpers ──────────────────────────────────── */
+
 .hidden { display: none !important; }
 
-/* ── Loading ─────────────────────────────────────────────── */
 .loading {
   text-align: center;
   padding: 40px 0;
@@ -257,7 +267,7 @@ input[type="range"]::-moz-range-thumb {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Error ───────────────────────────────────────────────── */
+
 .error-box {
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -268,7 +278,6 @@ input[type="range"]::-moz-range-thumb {
   margin-bottom: 20px;
 }
 
-/* ── Score cards ─────────────────────────────────────────── */
 .scores {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -348,4 +357,88 @@ input[type="range"]::-moz-range-thumb {
   color: #374151;
   line-height: 1.75;
   white-space: pre-wrap;
+}
+
+.field-group textarea {
+  width: 100%;
+  padding: 12px;
+  background: #f0ede8;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  color: #1a1a2e;
+  font-family: inherit;
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.field-group textarea:focus {
+  background: #e8e3dc;
+  box-shadow: 0 0 0 2px rgba(224,92,122,0.3);
+}
+
+
+.ld-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.ld-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ld-badge {
+  background: #eef2ff;
+  color: #4f6ef7;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 3px 12px;
+  border-radius: 20px;
+  border: 1px solid #c7d2fe;
+  min-width: 58px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+
+.ld-result-card {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.ld-result-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ld-result-score {
+  font-size: 30px;
+  font-weight: 700;
+  color: #4f6ef7;
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-result-desc {
+  font-size: 12px;
+  color: #6b7280;
 }
