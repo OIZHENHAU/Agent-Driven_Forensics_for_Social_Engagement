@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload CSV — Clout Detective</title>
+  <link rel="stylesheet" href="../static/css/dashboard3.css" />
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div class="logo-text">Clout<br/>Detective</div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard1.html" class="nav-item">
+        <span class="nav-dot"></span> Main Dashboard
+      </a>
+      <a href="dashboard2.html" class="nav-item">
+        <span class="nav-dot"></span> Single account Lookup
+      </a>
+      <a href="dashboard3.html" class="nav-item active">
+        <span class="nav-dot active"></span> Upload CSV
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      WIF3009 · Title 15<br/>
+      Unsupervised anomaly<br/>
+      detection
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1 class="page-title">Upload CSV — batch analysis</h1>
+    <p class="page-subtitle">Score multiple accounts or posts at once by uploading a CSV file</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-account" onclick="switchTab('account')">Account CSV</button>
+      <button class="tab" id="tab-post" onclick="switchTab('post')">Post CSV</button>
+    </div>
+
+    <!-- Required columns hint -->
+    <div class="card required-card">
+      <div class="card-header">REQUIRED COLUMNS</div>
+      <code class="cols-hint" id="cols-hint-account">profile_pic, followers, following, posts, description_length, external_url, private, name_equals_username, fullname_words, nums_length_username, nums_length_fullname</code>
+      <code class="cols-hint hidden" id="cols-hint-post">likes, comments, shares, character_count, hashtag_count, mention_count, contains_url, has_media, content, hour_of_day, day_of_week</code>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-card card" id="upload-zone">
+      <div class="upload-icon">&#8679;</div>
+      <p class="upload-title">Drag and drop your CSV here</p>
+      <p class="upload-hint">or click to browse — max file size 200 MB</p>
+      <input type="file" id="csv-file-input" accept=".csv" />
+      <button class="browse-btn" onclick="document.getElementById('csv-file-input').click()">Browse file</button>
+    </div>
+
+    <!-- File loaded preview -->
+    <div class="hidden" id="file-loaded-section">
+      <div class="file-meta">
+        <span class="file-name" id="file-name">—</span>
+        <span class="row-badge" id="row-count-badge">0 rows</span>
+      </div>
+      <div class="preview-wrap">
+        <table class="data-table" id="preview-table"></table>
+      </div>
+      <button class="analyse-btn" id="run-btn" onclick="runAnalysis()">
+        &#9654;&nbsp; Run analysis on <span id="row-count-btn">0</span> <span id="type-label-btn">accounts</span>
+      </button>
+    </div>
+
+    <!-- Error box -->
+    <div class="error-box hidden" id="errorBox"></div>
+
+    <!-- Progress -->
+    <div class="progress-section hidden" id="progress-section">
+      <div class="progress-header">
+        <span>ANALYSIS PROGRESS</span>
+        <span id="progress-text">0% complete</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p class="progress-status" id="progress-status">Running analysis…</p>
+    </div>
+
+    <!-- Results -->
+    <div class="hidden" id="results-section">
+      <div class="summary-bar">
+        <span class="sum-item sum-total">Total: <strong id="sum-total">0</strong></span>
+        <span class="sum-item sum-authentic">Authentic: <strong id="sum-authentic">0</strong></span>
+        <span class="sum-item sum-suspicious">Suspicious: <strong id="sum-suspicious">0</strong></span>
+      </div>
+      <div class="results-label">RESULTS — <span id="results-count">0</span> ROWS SCORED &nbsp;·&nbsp; <span class="click-hint">click any row to preview</span></div>
+      <div class="results-wrap">
+        <table class="data-table results-table">
+          <thead id="results-thead"></thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Row preview modal -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="modal-box">
+      <button class="modal-close" id="modal-close-btn">&#x2715;</button>
+      <div class="modal-row-label" id="modal-row-label">Row #1</div>
+      <div class="modal-key-data" id="modal-key-data"></div>
+
+      <div class="scores">
+        <div class="score-card">
+          <div class="score-num" id="m-if-score">—</div>
+          <div class="score-label">IF auth score</div>
+          <div class="score-status" id="m-if-status"></div>
+        </div>
+        <div class="score-card">
+          <div class="score-num" id="m-lof-score">—</div>
+          <div class="score-label">LOF auth score</div>
+          <div class="score-status" id="m-lof-status"></div>
+        </div>
+        <div class="score-card">
+          <div class="score-num" id="m-ensemble-score">—</div>
+          <div class="score-label">Ensemble score</div>
+          <div class="score-status" id="m-ensemble-status"></div>
+        </div>
+      </div>
+
+      <div class="verdict-banner" id="m-verdict-banner">
+        <div class="verdict-title" id="m-verdict-title"></div>
+        <div class="verdict-text" id="m-verdict-text"></div>
+      </div>
+
+      <button class="ai-btn" id="ai-btn" onclick="loadAiAnalysis()">Load AI Forensic Analysis</button>
+
+      <div class="loading hidden" id="m-loading">
+        <div class="spinner"></div>
+        <p>Generating AI analysis…</p>
+      </div>
+
+      <div class="gemini-card hidden" id="m-gemini">
+        <div class="gemini-header">AI Forensic Analysis</div>
+        <div class="gemini-body" id="m-gemini-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../static/js/dashboard3.js"></script>
+</body>
+</html>

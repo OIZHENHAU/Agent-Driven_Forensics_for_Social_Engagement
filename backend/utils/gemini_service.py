@@ -72,12 +72,12 @@ def isolation_forest_tool(account_data: dict) -> dict:
     combo = pd.concat([df.drop(columns=["fake"]), single], ignore_index=True)
 
     X = StandardScaler().fit_transform(engineer_account_features(combo))
-    X_real = X[:len(df)][df["fake"].values == 0]
-    cont = float(np.clip(df["fake"].mean(), 0.05, 0.45))
+    X_normal = X[:len(df)]
+    cont = 0.35
 
-    model = IsolationForest(n_estimators=300, contamination=cont, max_features=1.0, random_state=42, n_jobs=-1)
-    model.fit(X_real)
-    train_scores = model.decision_function(X[:len(df)])
+    model = IsolationForest(n_estimators=300, contamination=cont, max_features=1.0, random_state=42)
+    model.fit(X_normal)
+    train_scores = model.decision_function(X_normal)
     new_score = float(model.decision_function(X[-1:])[0])
     score = get_score(new_score, train_scores)
 
@@ -90,12 +90,12 @@ def lof_tool(account_data: dict) -> dict:
     single = account_data_summary(account_data)
     combo = pd.concat([df.drop(columns=["fake"]), single], ignore_index=True)
     X = StandardScaler().fit_transform(engineer_account_features(combo))
-    X_real = X[:len(df)][df["fake"].values == 0]
-    cont = float(np.clip(df["fake"].mean(), 0.05, 0.45))
+    X_normal = X[:len(df)]
+    cont = 0.35
 
-    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=cont, n_jobs=-1)
-    model.fit(X_real)
-    train_scores = model.decision_function(X[:len(df)])
+    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=cont)
+    model.fit(X_normal)
+    train_scores = model.decision_function(X_normal)
     new_score = float(model.decision_function(X[-1:])[0])
     score = get_score(new_score, train_scores)
 

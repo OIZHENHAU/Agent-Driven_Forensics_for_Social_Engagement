@@ -55,17 +55,17 @@ def scale_features(X_df):
     return scaler.fit_transform(X_df)
 
 
-def train_isolation_forest(X_normal, X_all, contamination=0.45):
-    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42, n_jobs=-1)
-    model.fit(X_normal)
-    scores      = model.decision_function(X_all)
+def train_isolation_forest(X_train, X_all, contamination=0.15):
+    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
+    model.fit(X_train)
+    scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
     return predictions, scores
 
 
-def train_lof(X_normal, X_all):
-    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", n_jobs=-1, contamination=0.5)
-    model.fit(X_normal)
+def train_lof(X_train, X_all, contamination=0.15):
+    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
+    model.fit(X_train)
     scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
     return predictions, scores
@@ -95,16 +95,16 @@ def plot_confusion_matrix(y_true, y_pred, title):
 
 def evaluate_model(y_true, y_pred, model_name):
     accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, zero_division=0)
-    recall = recall_score(y_true, y_pred, zero_division=0)
-    f1 = f1_score(y_true, y_pred, zero_division=0)
+    precision = precision_score(y_true, y_pred)
+    recall = recall_score(y_true, y_pred)
+    f1 = f1_score(y_true, y_pred)
 
     print(f"\n######## {model_name} Evaluation ##########")
     print(f"Accuracy : {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall : {recall:.4f}")
     print(f"F1 Score : {f1:.4f}")
-    print()
+    print("\n")
 
     return accuracy, precision, recall, f1
 
@@ -115,13 +115,11 @@ def main(df):
     X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    mask_normal = (df["fake"] == 0).values
-    X_normal = X_scaled[mask_normal]
-
-    contamination = 0.5
+    contamination = 0.35
+    X_normal = X_scaled[(df["fake"] == 0).values]
 
     # Train Isolation Forest
-    if_preds, _ = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
+    if_preds, if_anomaly_score = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
 
     print("\nIsolation Forest raw predictions")
     print(pd.Series(if_preds).value_counts())
@@ -132,7 +130,7 @@ def main(df):
     evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
     # Train Local Outlier Factor
-    lof_preds, _ = train_lof(X_normal, X_scaled)
+    lof_preds, lof_anomaly_score = train_lof(X_normal, X_scaled, contamination)
 
     print("\nLOF raw predictions")
     print(pd.Series(lof_preds).value_counts())
@@ -145,7 +143,16 @@ def main(df):
     return if_preds, lof_preds
 
 
-# training_model_account = main
+# Use to calculate the authentic score of the model
+def auth_score(value, ref):
+    lower_score = ref.min()
+    higher_score = ref.max()
+    
+    if (lower_score == higher_score):
+        return 50
+    
+    return int(np.clip((value - lower_score) / (higher_score - lower_score) * 100, 1, 100))
+
 
 # Train all the IsoaltionForest and LOF model on the cleaned dataset
 def predict_single_account(raw_input: dict) -> dict:
@@ -173,28 +180,104 @@ def predict_single_account(raw_input: dict) -> dict:
     X_scaled = scaler.fit_transform(X_eng)
 
     CONTAMINATION = 0.5
-    X_train = X_scaled[:len(df)]
+    X_normal = X_scaled[:len(df)]
 
     # Train Isolation Forest on input data
-    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42, n_jobs=-1)
-    if_model.fit(X_train)
+    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
+    if_model.fit(X_normal)
     if_scores = if_model.decision_function(X_scaled)
 
     # Train LOF on the input data
-    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", n_jobs=-1, contamination=CONTAMINATION)
-    lof_model.fit(X_train)
-    lof_train_scores = lof_model.decision_function(X_train)
+    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
+    lof_model.fit(X_normal)
+    lof_train_scores = lof_model.decision_function(X_normal)
     lof_new_score = float(lof_model.decision_function(X_scaled[-1:])[0])
 
-    def to_auth_score(score, ref_scores):
-        s_min, s_max = ref_scores.min(), ref_scores.max()
-        if s_max == s_min:
-            return 50
-        return int(np.clip((score - s_min) / (s_max - s_min) * 100, 1, 100))
-
-    if_auth = to_auth_score(if_scores[-1], if_scores[:len(df)])
-    lof_auth = to_auth_score(lof_new_score, lof_train_scores)
+    if_auth = auth_score(if_scores[-1], if_scores[:len(df)])
+    lof_auth = auth_score(lof_new_score, lof_train_scores)
     ensemble = int(round(0.6 * if_auth + 0.4 * lof_auth))
 
     return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, "verdict": "Authentic" if ensemble >= 50 else "Suspicious"}
+
+
+ACCOUNT_CSV_COLUMN_MAP = {
+    "followers": "#followers", 
+    "follower_count": "#followers",
+    "following": "#follows", 
+    "follows": "#follows", 
+    "follow_count": "#follows",
+    "posts": "#posts", 
+    "post_count": "#posts",
+    "profile_pic": "profile pic", 
+    "has_profile_pic": "profile pic",
+    "nums_length_username": "nums/length username", 
+    "username_digit_ratio": "nums/length username",
+    "fullname_words": "fullname words", 
+    "fullname_word_count": "fullname words",
+    "nums_length_fullname": "nums/length fullname", 
+    "fullname_digit_ratio": "nums/length fullname",
+    "name_equals_username": "name==username", 
+    "name_eq_username": "name==username",
+    "description_length": "description length", 
+    "bio_length": "description length",
+    "external_url": "external URL", 
+    "has_external_url": "external URL",
+    "is_private": "private",
+}
+
+ACCOUNT_COLUMN_USE = ["profile pic", "nums/length username", "fullname words", "nums/length fullname",
+                    "name==username", "description length", "external URL", "private", "#posts", "#followers", "#follows"]
+
+
+def predict_batch_accounts(rows: list) -> list:
+    df = pd.read_csv(CLEAN_PATH)
+
+    def normalize_dataset_row(row):
+        csv_output = {}
+        for key, value in row.items():
+            key = key.strip()
+            mapped = ACCOUNT_CSV_COLUMN_MAP.get(key.lower(), ACCOUNT_CSV_COLUMN_MAP.get(key, key))
+            csv_output[mapped] = value
+
+        result = {}
+        for column in ACCOUNT_COLUMN_USE:
+            try:
+                result[column] = float(csv_output.get(column, 0))
+
+            except (ValueError, TypeError):
+                result[column] = 0.0
+
+        return result
+
+    input_rows = [normalize_dataset_row(r) for r in rows]
+    input_df = pd.DataFrame(input_rows)
+
+    df_features = df.drop(columns=["fake"])
+    df_combined = pd.concat([df_features, input_df], ignore_index=True)
+
+    X_eng = engineer_features(df_combined)
+    X_scaled = StandardScaler().fit_transform(X_eng)
+
+    CONTAMINATION = 0.35
+    X_normal = X_scaled[:len(df)]
+
+    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
+    if_model.fit(X_normal)
+    if_scores_all = if_model.decision_function(X_scaled)
+
+    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
+    lof_model.fit(X_normal)
+    lof_train_scores = lof_model.decision_function(X_normal)
+    lof_input_scores = lof_model.decision_function(X_scaled[len(df):])
+
+    all_row_results = []
+    for i, row in enumerate(rows):
+        index = len(df) + i
+        if_auth = auth_score(if_scores_all[index], if_scores_all[:len(df)])
+        lof_auth = auth_score(lof_input_scores[i], lof_train_scores)
+        ensemble = int(round((if_auth + lof_auth) / 2))
+        all_row_results.append({"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, 
+                                "verdict": "Authentic" if ensemble >= 50 else "Suspicious", "row_data": row})
+
+    return all_row_results
 

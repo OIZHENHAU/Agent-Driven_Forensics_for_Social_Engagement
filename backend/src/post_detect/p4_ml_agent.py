@@ -55,9 +55,9 @@ def engineer_features(df):
     features["engagement_per_char"] = features["total_engagement"] / (df["character_count"] + eps)
 
     # Content density signals
-    features["hashtag_density"] = df["hashtag_count"] / (df["character_count"] + eps)
-    features["mention_density"] = df["mention_count"] / (df["character_count"] + eps)
-    features["url_per_char"] = df["contains_url"] / (df["character_count"] + eps)
+    # features["hashtag_density"] = df["hashtag_count"] / (df["character_count"] + eps)
+    # features["mention_density"] = df["mention_count"] / (df["character_count"] + eps)
+    # features["url_per_char"] = df["contains_url"] / (df["character_count"] + eps)
 
     # Log transforms to reduce skew on count columns
     features["log_likes"] = np.log1p(df["likes"])
@@ -77,17 +77,17 @@ def scale_features(X_df):
     return scaler.fit_transform(X_df)
 
 
-def train_isolation_forest(X_normal, X_all, contamination=0.45):
-    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42, n_jobs=-1)
-    model.fit(X_normal)
+def train_isolation_forest(X_train, X_all, contamination=0.15):
+    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
+    model.fit(X_train)
     scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
     return model, predictions, scores
 
 
-def train_lof(X_normal, X_all, contamination=0.35):
-    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination, n_jobs=-1)
-    model.fit(X_normal)
+def train_lof(X_train, X_all, contamination=0.15):
+    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
+    model.fit(X_train)
     scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
 
@@ -172,10 +172,9 @@ def main(df):
     X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    mask_normal = ~df["is_fake"].astype(bool)
-    X_normal = X_scaled[mask_normal]
-
-    contamination = 0.35
+    contamination = 0.5
+    X_normal = X_scaled[~df["is_fake"].astype(bool)]
+    # X_train = X_scaled
 
     # Train Isolation Forest model
     if_model, if_preds, _ = train_isolation_forest(X_normal, X_scaled, contamination)
