@@ -119,18 +119,17 @@ def predict_batch_posts(rows: list) -> list:
     X_eng = engineer_features(combo)
     X_scaled = StandardScaler().fit_transform(X_eng)
 
-    cont = 0.35
-    mask_normal = ~df["is_fake"].astype(bool)
-    X_normal = X_scaled[:len(df)][mask_normal.values]
+    CONTAMINATION = 0.5
+    X_train = X_scaled[:len(df)]
 
-    if_model = IsolationForest(n_estimators=300, contamination=cont, max_features=1.0, random_state=42)
-    if_model.fit(X_normal)
+    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
+    if_model.fit(X_train)
     if_scores_all = if_model.decision_function(X_scaled)
     train_if = if_scores_all[:len(df)]
 
-    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=cont)
-    lof_model.fit(X_normal)
-    train_lof_scores = lof_model.decision_function(X_normal)
+    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
+    lof_model.fit(X_train)
+    train_lof_scores = lof_model.decision_function(X_train)
     lof_input_scores = lof_model.decision_function(X_scaled[len(df):])
 
     results = []
@@ -184,21 +183,20 @@ def predict_single_post(post_data: dict) -> dict:
     X_eng = engineer_features(combo)
     X_scaled = StandardScaler().fit_transform(X_eng)
 
-    cont = 0.35
-    mask_normal = ~df["is_fake"].astype(bool)
-    X_normal = X_scaled[:len(df)][mask_normal.values]
+    CONTAMINATION = 0.5
+    X_train = X_scaled[:len(df)]
 
-    if_model = IsolationForest(n_estimators=300, contamination=cont, max_features=1.0, random_state=42)
-    if_model.fit(X_normal)
-    train_if = if_model.decision_function(X_normal)
+    if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
+    if_model.fit(X_train)
+    train_if = if_model.decision_function(X_train)
     if_score = get_authenticate_score(float(if_model.decision_function(X_scaled[-1:])[0]), train_if)
 
-    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=cont)
-    lof_model.fit(X_normal)
-    train_lof = lof_model.decision_function(X_normal)
+    lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
+    lof_model.fit(X_train)
+    train_lof = lof_model.decision_function(X_train)
     lof_score = get_authenticate_score(float(lof_model.decision_function(X_scaled[-1:])[0]), train_lof)
 
-    ensemble_score = int(round(0.6 * if_score + 0.4 * lof_score))
+    ensemble_score = int(round((if_score + lof_score) / 2))
 
     return {
         "if_score": if_score,

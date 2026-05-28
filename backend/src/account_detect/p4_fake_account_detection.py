@@ -55,7 +55,7 @@ def scale_features(X_df):
     return scaler.fit_transform(X_df)
 
 
-def train_isolation_forest(X_train, X_all, contamination=0.15):
+def train_isolation_forest(X_train, X_all, contamination=0.5):
     model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
     model.fit(X_train)
     scores = model.decision_function(X_all)
@@ -63,7 +63,7 @@ def train_isolation_forest(X_train, X_all, contamination=0.15):
     return predictions, scores
 
 
-def train_lof(X_train, X_all, contamination=0.15):
+def train_lof(X_train, X_all, contamination=0.5):
     model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
     model.fit(X_train)
     scores = model.decision_function(X_all)
@@ -115,7 +115,7 @@ def main(df):
     X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    contamination = 0.35
+    contamination = 0.5
     X_normal = X_scaled[(df["fake"] == 0).values]
 
     # Train Isolation Forest
@@ -180,22 +180,22 @@ def predict_single_account(raw_input: dict) -> dict:
     X_scaled = scaler.fit_transform(X_eng)
 
     CONTAMINATION = 0.5
-    X_normal = X_scaled[:len(df)]
+    X_train = X_scaled[:len(df)]
 
-    # Train Isolation Forest on input data
+    # Train Isolation Forest on all reference data
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
-    if_model.fit(X_normal)
+    if_model.fit(X_train)
     if_scores = if_model.decision_function(X_scaled)
 
-    # Train LOF on the input data
+    # Train LOF on all reference data
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
-    lof_model.fit(X_normal)
-    lof_train_scores = lof_model.decision_function(X_normal)
+    lof_model.fit(X_train)
+    lof_train_scores = lof_model.decision_function(X_train)
     lof_new_score = float(lof_model.decision_function(X_scaled[-1:])[0])
 
     if_auth = auth_score(if_scores[-1], if_scores[:len(df)])
     lof_auth = auth_score(lof_new_score, lof_train_scores)
-    ensemble = int(round(0.6 * if_auth + 0.4 * lof_auth))
+    ensemble = int(round((if_auth + lof_auth) / 2))
 
     return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, "verdict": "Authentic" if ensemble >= 50 else "Suspicious"}
 
@@ -258,16 +258,16 @@ def predict_batch_accounts(rows: list) -> list:
     X_eng = engineer_features(df_combined)
     X_scaled = StandardScaler().fit_transform(X_eng)
 
-    CONTAMINATION = 0.35
-    X_normal = X_scaled[:len(df)]
+    CONTAMINATION = 0.5
+    X_train = X_scaled[:len(df)]
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
-    if_model.fit(X_normal)
+    if_model.fit(X_train)
     if_scores_all = if_model.decision_function(X_scaled)
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
-    lof_model.fit(X_normal)
-    lof_train_scores = lof_model.decision_function(X_normal)
+    lof_model.fit(X_train)
+    lof_train_scores = lof_model.decision_function(X_train)
     lof_input_scores = lof_model.decision_function(X_scaled[len(df):])
 
     all_row_results = []

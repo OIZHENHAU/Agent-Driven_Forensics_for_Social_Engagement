@@ -77,7 +77,7 @@ def scale_features(X_df):
     return scaler.fit_transform(X_df)
 
 
-def train_isolation_forest(X_train, X_all, contamination=0.15):
+def train_isolation_forest(X_train, X_all, contamination=0.5):
     model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
     model.fit(X_train)
     scores = model.decision_function(X_all)
@@ -85,7 +85,7 @@ def train_isolation_forest(X_train, X_all, contamination=0.15):
     return model, predictions, scores
 
 
-def train_lof(X_train, X_all, contamination=0.15):
+def train_lof(X_train, X_all, contamination=0.5):
     model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
     model.fit(X_train)
     scores = model.decision_function(X_all)
@@ -172,25 +172,25 @@ def main(df):
     X_eng = engineer_features(df)
     X_scaled = scale_features(X_eng)
 
-    contamination = 0.5
+    CONTAMINATION = 0.5
+
     X_normal = X_scaled[~df["is_fake"].astype(bool)]
-    # X_train = X_scaled
 
     # Train Isolation Forest model
-    if_model, if_preds, _ = train_isolation_forest(X_normal, X_scaled, contamination)
+    if_model, if_preds, if_score = train_isolation_forest(X_normal, X_scaled, CONTAMINATION)
 
     print("\nIsolation Forest raw predictions")
     print(pd.Series(if_preds).value_counts())
     plot_anomaly_results(if_preds, "Isolation_Forest_Result")
     plot_feature_importance(if_model, list(X_eng.columns), "Feature_Importance_IF")
 
-    # Convert raw predictions whre -1 (anomaly) means 1 (fake), and 1 (normal) means 0 (real)
+    # Convert raw predictions where -1 (anomaly) means 1 (fake), and 1 (normal) means 0 (real)
     if_y_pred = (if_preds == -1).astype(int)
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
     evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
     # Train the Local Outlier Factor model
-    lof_preds, _ = train_lof(X_normal, X_scaled, contamination)
+    lof_preds, lof_score = train_lof(X_normal, X_scaled, CONTAMINATION)
 
     print("\nLOF raw predictions")
     print(pd.Series(lof_preds).value_counts())

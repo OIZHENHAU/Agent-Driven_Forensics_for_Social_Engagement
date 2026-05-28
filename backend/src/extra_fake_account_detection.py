@@ -5,226 +5,200 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score)
 
-DATA_PATH  = os.path.join(os.path.dirname(__file__), "..", "..", "data", "fake_social_media_global_2.0_with_missing.xlsx")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
+
+CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_data.csv")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs", "post")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Caluclate the lexical diversity score by using the Type-Token RAtio (unique words / total words)
+def compute_lexical_diversity(text_series):
+    eps = 1e-6
+    def ttr(text):
+        if pd.isna(text) or str(text).strip() == "":
+            return 0.0
+        words = str(text).lower().split()
+        return len(set(words)) / (len(words) + eps)
+    
+    return text_series.apply(ttr)
 
-def load_dataset() -> pd.DataFrame:
-    df = pd.read_excel(DATA_PATH)
-    print(f"Loaded dataset: {df.shape[0]} accounts, {df.shape[1]} columns")
-    return df
 
-
-def preprocess(df: pd.DataFrame) -> pd.DataFrame:
-    for col in df.select_dtypes(include=np.number).columns:
-        df[col] = df[col].fillna(df[col].median())
-    return df
-
-
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+def engineer_features(df):
+    eps = 1e-6
     features = pd.DataFrame(index=df.index)
 
-    for col in ["username_length", "digits_count", "special_char_count", "digit_ratio", "verified", "username_randomness"]:
-        if col in df.columns:
-            features[col] = df[col]
+    # Exclude label-encoded categoricals
+    encoded_categoricals = {
+        "is_fake", "activity_id", "user_id",
+        "post_country", "post_region", "post_city",
+        "device", "platform", "media_type", "content_type", "language",
+    }
 
-    if "repeat_char_count" in df.columns:
-        features["log_repeat_char_count"] = np.log1p(
-            df["repeat_char_count"].clip(lower=0))
+    # Get all numerical columns
+    numerical_columns = (df.select_dtypes(include='number').columns)
 
-    if {"username_length", "repeat_char_count"} <= set(df.columns):
-        features["username_anomaly"]    = (df["username_length"] * df["repeat_char_count"])
-        features["username_anomaly_sq"] = (df["username_length"] ** 2 * df["repeat_char_count"])
+    # Raw numeric signals (skip encoded categoricals)
+    for col in numerical_columns:
+        if col in df.columns and col not in encoded_categoricals:
+            features[col] = df[col].astype(float)
 
-    if {"digits_count", "username_length"} <= set(df.columns):
-        features["digit_density"] = df["digits_count"] / (df["username_length"] + 1)
+    # Engagement ratios
+    features["comments_per_like"] = df["comments"] / (df["likes"] + eps)
+    features["shares_per_like"] = df["shares"] / (df["likes"] + eps)
+    features["shares_per_comment"]  = df["shares"] / (df["comments"] + eps)
+    features["total_engagement"] = df["likes"] + df["comments"] + df["shares"]
+    features["engagement_per_char"] = features["total_engagement"] / (df["character_count"] + eps)
 
-    if "username_length" in df.columns:
-        features["username_length_sq"] = df["username_length"] ** 2
+    # Content density signals
+    # features["hashtag_density"] = df["hashtag_count"] / (df["character_count"] + eps)
+    # features["mention_density"] = df["mention_count"] / (df["character_count"] + eps)
+    # features["url_per_char"] = df["contains_url"] / (df["character_count"] + eps)
+
+    # Log transforms to reduce skew on count columns
+    features["log_likes"] = np.log1p(df["likes"])
+    features["log_comments"] = np.log1p(df["comments"])
+    features["log_shares"] = np.log1p(df["shares"])
+    features["log_character_count"] = np.log1p(df["character_count"])
+
+    # Lexical diversity from post content using Type-Token Ratio
+    if "content" in df.columns:
+        features["lexical_diversity"] = compute_lexical_diversity(df["content"])
 
     return features
 
 
-def scale_features(X_df: pd.DataFrame) -> np.ndarray:
+def scale_features(X_df):
     scaler = StandardScaler()
     return scaler.fit_transform(X_df)
 
 
-def train_isolation_forest(X: np.ndarray, contamination: float = 0.15):
-    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=0.9, random_state=42,n_jobs=-1)
-    model.fit(X)
-    scores = model.decision_function(X)
-    predictions = model.predict(X)
-    return predictions, scores, model
+def train_isolation_forest(X_train, X_all, contamination=0.35):
+    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
+    model.fit(X_train)
+    scores = model.decision_function(X_all)
+    predictions = model.predict(X_all)
+    return model, predictions, scores
 
 
-def train_lof(X: np.ndarray, contamination: float = 0.15):
-    model = LocalOutlierFactor(n_neighbors=10, novelty=True, contamination=contamination, metric="euclidean", n_jobs=-1)
-    model.fit(X)
-    scores = model.decision_function(X)
-    predictions = model.predict(X)
-    return predictions, scores, model
+def train_lof(X_train, X_all, contamination=0.35):
+    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
+    model.fit(X_train)
+    scores = model.decision_function(X_all)
+    predictions = model.predict(X_all)
+    return predictions, scores
 
 
-def compute_authenticity_score(if_scores: np.ndarray, lof_scores: np.ndarray) -> np.ndarray:
-    scaler   = MinMaxScaler()
-    if_norm  = scaler.fit_transform(if_scores.reshape(-1, 1)).flatten()
-    lof_norm = scaler.fit_transform(lof_scores.reshape(-1, 1)).flatten()
-    combined = 0.6 * if_norm + 0.4 * lof_norm
+# Derives feature importance from IsolationForest by counting how many time 
+# each feature is used as a split node across all trees, the more it splits, the more useeful the features is.
+'''def plot_feature_importance(if_model, feature_names, title="Feature_Importance_IF"):
+    n_features = len(feature_names)
+    importances = np.zeros(n_features)
 
-    return np.round(combined * 100, 2)
+    for tree in if_model.estimators_:
+        for feature_idx in tree.tree_.feature:
+            if feature_idx >= 0:
+                importances[feature_idx] += 1
 
+    total = importances.sum()
+    if total > 0:
+        importances /= total
 
-def find_best_threshold(y_true, scores, target_precision=0.70, target_recall=0.70):
-    thresholds = np.linspace(scores.min(), scores.max(), 2000)
-    best_primary = None
-    best_primary_f1 = 0.0
-    best_fallback = None
-    best_fallback_f1= 0.0
+    sorted_idx = np.argsort(importances)
+    sorted_names = [feature_names[i] for i in sorted_idx]
+    sorted_vals  = importances[sorted_idx]
 
-    for thresh in thresholds:
-        y_pred = (scores <= thresh).astype(int)
-        if y_pred.sum() == 0:
-            continue
-        prec = precision_score(y_true, y_pred, zero_division=0)
-        rec  = recall_score(y_true, y_pred, zero_division=0)
-        f1   = f1_score(y_true, y_pred, zero_division=0)
+    plt.figure(figsize=(8, max(4, n_features * 0.35)))
+    plt.barh(sorted_names, sorted_vals, color="#4f6ef7")
+    plt.xlabel("Relative Importance (split frequency)")
+    plt.title(title.replace("_", " "))
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
+    plt.close()
 
-        if prec >= target_precision and rec >= target_recall:
-            if f1 > best_primary_f1:
-                best_primary_f1 = f1
-                best_primary = (thresh, prec, rec, f1, y_pred)
+    print("\n")
+    print("Print top 5 imporantce features: ")
+    for name, val in sorted(zip(feature_names, importances), key=lambda x: -x[1])[:5]:
+        print(f"{name}: {val:.4f}")
+'''
 
-        if f1 > best_fallback_f1:
-            best_fallback_f1 = f1
-            best_fallback = (thresh, prec, rec, f1, y_pred)
-
-    return best_primary if best_primary else best_fallback
-
-
-def plot_anomaly_distribution(predictions: np.ndarray, title: str) -> None:
-    normal = (predictions ==  1).sum()
+'''def plot_anomaly_results(predictions, title):
+    normal = (predictions == 1).sum()
     anomaly = (predictions == -1).sum()
     plt.figure(figsize=(6, 4))
-    plt.bar(["Authentic", "Suspicious / Fake"], [normal, anomaly], color=["steelblue", "tomato"])
+    plt.bar(["Normal", "Anomaly"], [normal, anomaly])
     plt.title(title)
-    plt.ylabel("Account Count")
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}.png"))
+    plt.ylabel("Count")
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
     plt.close()
+'''
 
-
-def plot_authenticity_score_dist(scores: np.ndarray, title: str) -> None:
-    plt.figure(figsize=(8, 4))
-    plt.hist(scores, bins=40, color="steelblue", edgecolor="white")
-    plt.axvline(50, color="tomato", linestyle="--", label="50% threshold")
-    plt.title(title)
-    plt.xlabel("Authenticity Confidence Score  (0 = Fake, 100 = Real)")
-    plt.ylabel("Account Count")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}.png"))
-    plt.close()
-
-
-def plot_confusion_matrix(y_true, y_pred, title: str) -> None:
+'''def plot_confusion_matrix(y_true, y_pred, title):
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(6, 5))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["Real", "Fake"], yticklabels=["Real", "Fake"])
     plt.title(title)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
     plt.close()
+'''
 
-
-def evaluate_model(y_true, y_pred, model_name: str) -> dict:
-    accuracy  = accuracy_score(y_true, y_pred)
+def evaluate_model(y_true, y_pred, model_name):
+    accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred, zero_division=0)
     recall = recall_score(y_true, y_pred, zero_division=0)
     f1 = f1_score(y_true, y_pred, zero_division=0)
 
-    print(f"\n######## {model_name} Evaluation ########")
+    print(f"\n######## {model_name} Evaluation ##########")
     print(f"Accuracy : {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
-    print(f"Recall   : {recall:.4f}")
+    print(f"Recall : {recall:.4f}")
     print(f"F1 Score : {f1:.4f}")
+    print("\n")
 
-    return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1}
-
-
-def main(df: pd.DataFrame = None):
-    if df is None:
-        df = load_dataset()
-
-    df = preprocess(df)
-    y_true = df["is_fake"].astype(int).values if "is_fake" in df.columns else None
-
-    X_df = engineer_features(df)
-    X_scaled = scale_features(X_df)
-
-    actual_contamination = float(np.clip(y_true.mean(), 0.05, 0.45)) if y_true is not None else 0.15
-
-    if_preds, if_scores, _ = train_isolation_forest(X_scaled, actual_contamination)
-
-    print("\nIsolation Forest — account distribution:")
-    print(pd.Series(if_preds).value_counts().rename({1: "Authentic", -1: "Suspicious"}))
-    plot_anomaly_distribution(if_preds, "IF_Fake_Account_Distribution")
-
-    if y_true is not None:
-        if_best = find_best_threshold(y_true, if_scores)
-        thresh, prec, rec, f1, if_y_pred = if_best
-        met   = prec >= 0.70 and rec >= 0.70
-        label = "Optimised" if met else "Best-available"
-        print(f"{label} IF  threshold={thresh:.4f}  " f"Precision={prec:.4f}  Recall={rec:.4f}  F1={f1:.4f}")
-        plot_confusion_matrix(y_true, if_y_pred, "IF_Fake_Account_Confusion_Matrix")
-        evaluate_model(y_true, if_y_pred, "Isolation Forest")
+    return accuracy, precision, recall, f1
 
 
-    lof_preds, lof_scores, _ = train_lof(X_scaled, actual_contamination)
+def main(df):
+    # Change the is fake from Boolean to Integer
+    y_true = df["is_fake"].astype(bool).astype(int).values
 
-    print("\nLOF — account distribution:")
-    print(pd.Series(lof_preds).value_counts()
-            .rename({1: "Authentic", -1: "Suspicious"}))
-    plot_anomaly_distribution(lof_preds, "LOF_Fake_Account_Distribution")
+    X_eng = engineer_features(df)
+    X_scaled = scale_features(X_eng)
 
-    if y_true is not None:
-        lof_best = find_best_threshold(y_true, lof_scores)
-        thresh, prec, rec, f1, lof_y_pred = lof_best
-        met   = prec >= 0.70 and rec >= 0.70
-        label = "Optimised" if met else "Best-available"
-        print(f"{label} LOF threshold={thresh:.4f}  "
-              f"Precision={prec:.4f}  Recall={rec:.4f}  F1={f1:.4f}")
-        plot_confusion_matrix(y_true, lof_y_pred, "LOF_Fake_Account_Confusion_Matrix")
-        evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
+    CONTAMINATION = 0.5
 
-    auth_scores = compute_authenticity_score(if_scores, lof_scores)
-    plot_authenticity_score_dist(auth_scores,
-                                 "Authenticity_Confidence_Score_Distribution")
+    X_normal = X_scaled[~df["is_fake"].astype(bool)]
 
-    print(f"\nAuthenticity Confidence Score — sample (first 10 accounts):")
-    print(auth_scores[:10])
+    # Train Isolation Forest model
+    if_model, if_preds, _ = train_isolation_forest(X_normal, X_scaled, CONTAMINATION)
 
-    df = df.copy()
-    df["authenticity_score"] = auth_scores
-    df["if_prediction"] = if_preds
-    df["lof_prediction"] = lof_preds
+    print("\nIsolation Forest raw predictions")
+    print(pd.Series(if_preds).value_counts())
 
-    df["is_suspicious"] = (auth_scores < 50).astype(int)
+    # Convert raw predictions where -1 (anomaly) = 1 (fake), +1 (normal) = 0 (real)
+    if_y_pred = (if_preds == -1).astype(int)
+    print(if_y_pred.size)
+    print(y_true.size)
+    evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
-    suspicious_count = df["is_suspicious"].sum()
-    print(f"\nAccounts flagged suspicious (score < 50): " f"{suspicious_count} ({suspicious_count / len(df) * 100:.1f}%)")
+    # Train the Local Outlier Factor model
+    lof_preds, _ = train_lof(X_normal, X_scaled, CONTAMINATION)
 
-    return df
+    print("\nLOF raw predictions")
+    print(pd.Series(lof_preds).value_counts())
+
+    # Convert raw predictions where -1 (anomaly) = 1 (fake), +1 (normal) = 0 (real)
+    lof_y_pred = (lof_preds == -1).astype(int)
+    evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
+
+    return if_preds, lof_preds
 
 
-if __name__ == "__main__":
-    main()
+df = pd.read_csv(CLEAN_PATH)
+main(df)
