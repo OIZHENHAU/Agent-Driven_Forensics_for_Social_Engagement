@@ -109,40 +109,6 @@ def evaluate_model(y_true, y_pred, model_name):
     return accuracy, precision, recall, f1
 
 
-def main(df):
-    y_true = df["fake"].values
-
-    X_eng = engineer_features(df)
-    X_scaled = scale_features(X_eng)
-
-    contamination = 0.5
-    X_normal = X_scaled[(df["fake"] == 0).values]
-
-    # Train Isolation Forest
-    if_preds, if_anomaly_score = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
-
-    print("\nIsolation Forest raw predictions")
-    print(pd.Series(if_preds).value_counts())
-    plot_anomaly_results(if_preds, "Isolation_Forest_Result")
-
-    if_y_pred = (if_preds == -1).astype(int)
-    plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
-    evaluate_model(y_true, if_y_pred, "Isolation Forest")
-
-    # Train Local Outlier Factor
-    lof_preds, lof_anomaly_score = train_lof(X_normal, X_scaled, contamination)
-
-    print("\nLOF raw predictions")
-    print(pd.Series(lof_preds).value_counts())
-    plot_anomaly_results(lof_preds, "LOF_Result")
-
-    lof_y_pred = (lof_preds == -1).astype(int)
-    plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
-    evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
-
-    return if_preds, lof_preds
-
-
 # Use to calculate the authentic score of the model
 def auth_score(value, ref):
     lower_score = ref.min()
@@ -281,3 +247,36 @@ def predict_batch_accounts(rows: list) -> list:
 
     return all_row_results
 
+
+def main(df, X_pca=None):
+    y_true = df["fake"].values
+
+    X_eng = engineer_features(df)
+    X_scaled = scale_features(X_eng)
+
+    contamination = 0.5
+    X_normal = X_scaled[(df["fake"] == 0).values]
+
+    # Train Isolation Forest
+    if_preds, if_anomaly_score = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
+
+    print("\nIsolation Forest raw predictions")
+    print(pd.Series(if_preds).value_counts())
+    plot_anomaly_results(if_preds, "Isolation_Forest_Result")
+
+    if_y_pred = (if_preds == -1).astype(int)
+    plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
+    evaluate_model(y_true, if_y_pred, "Isolation Forest")
+
+    # Train Local Outlier Factor
+    lof_preds, lof_anomaly_score = train_lof(X_normal, X_scaled, contamination)
+
+    print("\nLOF raw predictions")
+    print(pd.Series(lof_preds).value_counts())
+    plot_anomaly_results(lof_preds, "LOF_Result")
+
+    lof_y_pred = (lof_preds == -1).astype(int)
+    plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
+    evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
+
+    return if_preds, lof_preds

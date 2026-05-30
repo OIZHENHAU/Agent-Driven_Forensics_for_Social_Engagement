@@ -114,8 +114,6 @@ def analyze_csv_row_endpoint():
 
 
 if __name__ == '__main__':
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        threading.Thread(target=run_pipeline, daemon=True).start()
-        
-    app.run(debug=True, port=5000)
+    threading.Thread(target=run_pipeline, daemon=True).start()
+    app.run(debug=True, use_reloader=False, port=5000)
 

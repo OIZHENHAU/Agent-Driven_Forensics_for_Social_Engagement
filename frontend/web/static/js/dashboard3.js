@@ -1,12 +1,10 @@
-// ── State ────────────────────────────────────────────────────────────────────
-let currentMode = 'account';   // 'account' | 'post'
-let parsedRows  = [];           // raw CSV rows (array of objects)
-let analysisResults = [];       // results from /api/analyze-csv
-let aiCache = {};               // rowIndex → gemini_explanation string
-let activeRowIndex = null;      // which row is open in the modal
+let currentMode = 'account';
+let parsedRows = [];
+let analysisResults = [];
+let aiCache = {};
+let activeRowIndex = null;
 
 
-// ── Tab switch ───────────────────────────────────────────────────────────────
 function switchTab(mode) {
   currentMode = mode;
   ['account', 'post'].forEach(t => {
@@ -18,7 +16,6 @@ function switchTab(mode) {
 }
 
 
-// ── Reset everything ─────────────────────────────────────────────────────────
 function resetAll() {
   parsedRows = [];
   analysisResults = [];
@@ -51,7 +48,6 @@ uploadZone.addEventListener('click', e => {
 });
 
 
-// ── Parse & preview CSV ───────────────────────────────────────────────────────
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = function (e) {
@@ -109,7 +105,6 @@ function renderPreview(rows) {
 }
 
 
-// ── Run analysis ─────────────────────────────────────────────────────────────
 async function runAnalysis() {
   if (!parsedRows.length) return;
 
@@ -178,7 +173,6 @@ function setProgressStatus(text, done) {
 }
 
 
-// ── Render results table ─────────────────────────────────────────────────────
 function renderResults(data) {
   document.getElementById('sum-total').textContent     = data.total;
   document.getElementById('sum-authentic').textContent = data.authentic;
@@ -233,7 +227,6 @@ function detectIdentifier(rowData) {
 }
 
 
-// ── Modal ────────────────────────────────────────────────────────────────────
 function openModal(index) {
   activeRowIndex = index;
   const r = analysisResults[index];
@@ -259,8 +252,8 @@ function openModal(index) {
   document.getElementById('modal-key-data').innerHTML =
     idPart + keyPairs.map(([k, v]) => `<strong>${k}:</strong> ${esc(String(v))}`).join(' &nbsp;&middot;&nbsp; ');
 
-  setModalScore('m-if-score',       'm-if-status',       r.if_score,       r.if_score < 50);
-  setModalScore('m-lof-score',      'm-lof-status',      r.lof_score,      r.lof_score < 50);
+  setModalScore('m-if-score', 'm-if-status', r.if_score, r.if_score < 50);
+  setModalScore('m-lof-score', 'm-lof-status', r.lof_score, r.lof_score < 50);
   setModalScore('m-ensemble-score', 'm-ensemble-status', r.ensemble_score, suspicious);
 
   const banner = document.getElementById('m-verdict-banner');
@@ -305,7 +298,7 @@ document.getElementById('modal-overlay').addEventListener('click', function (e) 
 document.getElementById('modal-close-btn').addEventListener('click', closeModalDirect);
 
 
-// ── AI Analysis (on demand) ──────────────────────────────────────────────────
+
 async function loadAiAnalysis() {
   if (activeRowIndex === null) return;
 
@@ -362,7 +355,6 @@ function showGeminiText(text) {
 }
 
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 function showError(msg) {
   const box = document.getElementById('errorBox');
   box.textContent = 'Error: ' + msg;

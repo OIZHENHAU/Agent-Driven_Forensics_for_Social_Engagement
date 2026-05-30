@@ -165,7 +165,7 @@ def evaluate_model(y_true, y_pred, model_name):
     return accuracy, precision, recall, f1
 
 
-def main(df):
+def main(df, X_pca=None):
     # Change the is fake from Boolean to Integer
     y_true = df["is_fake"].astype(bool).astype(int).values
 
