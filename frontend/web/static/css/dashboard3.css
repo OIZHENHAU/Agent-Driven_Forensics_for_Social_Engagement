@@ -213,10 +213,13 @@ body {
 #csv-file-input { display: none; }
 
 .browse-btn {
+  display: block;
+  margin: 0 auto;
+  min-width: 260px;
   background: #fff;
   border: 1.5px solid #d1d5db;
   border-radius: 9px;
-  padding: 9px 24px;
+  padding: 9px 48px;
   font-size: 13px;
   font-weight: 500;
   color: #374151;

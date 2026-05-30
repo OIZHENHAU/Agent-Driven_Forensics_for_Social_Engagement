@@ -11,7 +11,6 @@ function switchTab(mode) {
     document.getElementById('tab-' + t).classList.toggle('active', t === mode);
     document.getElementById('cols-hint-' + t).classList.toggle('hidden', t !== mode);
   });
-  document.getElementById('type-label-btn').textContent = mode === 'post' ? 'posts' : 'accounts';
   resetAll();
 }
 
@@ -21,7 +20,7 @@ function resetAll() {
   analysisResults = [];
   aiCache = {};
   document.getElementById('file-loaded-section').classList.add('hidden');
-  document.getElementById('progress-section').classList.add('hidden');
+  document.getElementById('loading-section').classList.add('hidden');
   document.getElementById('results-section').classList.add('hidden');
   document.getElementById('errorBox').classList.add('hidden');
   document.getElementById('csv-file-input').value = '';
@@ -59,11 +58,10 @@ function handleFile(file) {
     }
     document.getElementById('file-name').textContent = file.name;
     document.getElementById('row-count-badge').textContent = parsedRows.length + ' rows';
-    document.getElementById('row-count-btn').textContent = parsedRows.length;
     renderPreview(parsedRows);
     document.getElementById('file-loaded-section').classList.remove('hidden');
     document.getElementById('results-section').classList.add('hidden');
-    document.getElementById('progress-section').classList.add('hidden');
+    document.getElementById('loading-section').classList.add('hidden');
   };
   reader.readAsText(file);
 }
@@ -119,31 +117,21 @@ async function runAnalysis() {
   formData.append('file', blob, 'upload.csv');
   formData.append('type', currentMode);
 
-  showProgress(0, 'Running analysis…');
-
-  let fake = 0;
-  const ticker = setInterval(() => {
-    fake = Math.min(fake + 3, 88);
-    setProgressBar(fake);
-  }, 200);
+  document.getElementById('loading-section').classList.remove('hidden');
 
   try {
     const res = await fetch('/api/analyze-csv', { method: 'POST', body: formData });
     const data = await res.json();
-    clearInterval(ticker);
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
 
-    setProgressBar(100);
-    setProgressStatus('Analysis complete', true);
     analysisResults = data.results;
     aiCache = {};
     renderResults(data);
 
   } catch (err) {
-    clearInterval(ticker);
-    document.getElementById('progress-section').classList.add('hidden');
     showError(err.message);
   } finally {
+    document.getElementById('loading-section').classList.add('hidden');
     runBtn.disabled = false;
   }
 }
@@ -155,22 +143,6 @@ function rowsToCsv(rows) {
   return lines.join('\n');
 }
 
-function showProgress(pct, statusText) {
-  document.getElementById('progress-section').classList.remove('hidden');
-  setProgressBar(pct);
-  setProgressStatus(statusText, false);
-}
-
-function setProgressBar(pct) {
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-text').textContent = Math.round(pct) + '% complete';
-}
-
-function setProgressStatus(text, done) {
-  const el = document.getElementById('progress-status');
-  el.textContent = (done ? '✓ ' : '') + text;
-  el.className = 'progress-status' + (done ? ' done' : '');
-}
 
 
 function renderResults(data) {

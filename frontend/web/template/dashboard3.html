@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Upload CSV — Clout Detective</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../static/css/dashboard3.css" />
 </head>
 <body>
@@ -18,7 +20,7 @@
         <span class="nav-dot"></span> Main Dashboard
       </a>
       <a href="dashboard2.html" class="nav-item">
-        <span class="nav-dot"></span> Single account Lookup
+        <span class="nav-dot"></span> Single Account Lookup
       </a>
       <a href="dashboard3.html" class="nav-item active">
         <span class="nav-dot active"></span> Upload CSV
@@ -32,8 +34,8 @@
   </aside>
 
   <main class="main">
-    <h1 class="page-title">Upload CSV — batch analysis</h1>
-    <p class="page-subtitle">Score multiple accounts or posts at once by uploading a CSV file</p>
+    <h1 class="page-title">Upload CSV</h1>
+    <p class="page-subtitle">Analysing multiple accounts or posts at once by uploading a CSV file</p>
 
     <div class="tabs">
       <button class="tab active" id="tab-account" onclick="switchTab('account')">Account CSV</button>
@@ -47,7 +49,7 @@
     </div>
 
     <div class="upload-card card" id="upload-zone">
-      <div class="upload-icon">&#8679;</div>
+      <div class="upload-icon"><i class="bi bi-cloud-upload-fill"></i></div>
       <p class="upload-title">Drag and drop your CSV here</p>
       <p class="upload-hint">or click to browse — max file size 200 MB</p>
       <input type="file" id="csv-file-input" accept=".csv" />
@@ -63,23 +65,15 @@
       <div class="preview-wrap">
         <table class="data-table" id="preview-table"></table>
       </div>
-      <button class="analyse-btn" id="run-btn" onclick="runAnalysis()">
-        &#9654;&nbsp; Run analysis on <span id="row-count-btn">0</span> <span id="type-label-btn">accounts</span>
-      </button>
+      <button class="analyse-btn" id="run-btn" onclick="runAnalysis()">Run CSV file</button>
     </div>
 
     <!-- Error box -->
     <div class="error-box hidden" id="errorBox"></div>
 
-    <div class="progress-section hidden" id="progress-section">
-      <div class="progress-header">
-        <span>ANALYSIS PROGRESS</span>
-        <span id="progress-text">0% complete</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progress-fill"></div>
-      </div>
-      <p class="progress-status" id="progress-status">Running analysis…</p>
+    <div class="loading hidden" id="loading-section">
+      <div class="spinner"></div>
+      <p>Analysing...</p>
     </div>
 
     <!-- Results -->
@@ -143,6 +137,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
   <script src="../static/js/dashboard3.js"></script>
 </body>
 </html>
