@@ -5,6 +5,7 @@ from src.post_detect.p1_data_cleaning import clean_dataset
 from src.post_detect.p2_eda import exploratory_analysis
 from src.post_detect.p3_pca import perform_PCA
 from src.post_detect.p4_ml_agent import main as train_model_post
+from src.post_detect.p4_ml_agent import (check_enginner_features)
 
 from src.account_detect.p1_fake_account_cleaning import clean_dataset_account
 from src.account_detect.p2_fake_account_eda import exploratory_analysis_account
@@ -19,6 +20,7 @@ def main():
     cleaned_df = clean_dataset()
     exploratory_analysis(cleaned_df)
     post_pca, X_post_pca = perform_PCA(cleaned_df)
+    # check_enginner_features(cleaned_df)
     if_post_score, lof_post_score = train_model_post(cleaned_df, X_pca=X_post_pca)
 
     # Account Detection

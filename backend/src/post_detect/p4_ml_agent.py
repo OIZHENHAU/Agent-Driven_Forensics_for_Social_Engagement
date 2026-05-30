@@ -9,6 +9,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score)
+from scipy.stats import skew
+from src.post_detect.p3_pca import (apply_pca, plot_pca_scatter, normalize_features, engineer_features)
 
 
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_data.csv")
@@ -16,65 +18,66 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "pos
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Caluclate the lexical diversity score by using the Type-Token RAtio (unique words / total words)
-def compute_lexical_diversity(text_series):
-    eps = 1e-6
-    def ttr(text):
-        if pd.isna(text) or str(text).strip() == "":
-            return 0.0
-        words = str(text).lower().split()
-        return len(set(words)) / (len(words) + eps)
-    
-    return text_series.apply(ttr)
+
+# Plot a log validation diagram
+def validate_log_engineer_features(df: pd.DataFrame) -> None:
+
+    numeric_columns = (df.select_dtypes(include=np.number).columns)
+
+    valid_columns = []
+    skipped_columns = []
+
+    # Check which columns are safe watch out for non-zero variance for skewness
+    for col in numeric_columns:
+
+        min_value = df[col].min()
+
+        if min_value > -1 and df[col].std() > 0:
+            valid_columns.append(col)
+        else:
+            skipped_columns.append(col)
+
+    print("\nSafe Columns:")
+    print(valid_columns)
+
+    print("\nSkipped Columns:")
+    print(skipped_columns)
+
+    # Create subplot
+    num_features = len(valid_columns)
+    rows = (num_features // 3) + 1
+
+    fig, axes = plt.subplots(rows, 3, figsize=(18, rows * 5))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(valid_columns):
+        clean_data = (df[col].dropna())
+
+        original_skew = skew(clean_data)
+        log_data = np.log1p(clean_data)
+        transformed_skew = skew(log_data)
+
+        print( f"\n{col}")
+
+        print(f"Original Skewness: " f"{original_skew:.2f}")
+
+        print(f"Log Transformed " f"Skewness: " f"{transformed_skew:.2f}")
+
+        axes[i].hist(log_data, bins=30)
+
+        axes[i].set_title(f"Log Distribution\n{col}")
 
 
-def engineer_features(df):
-    eps = 1e-6
-    features = pd.DataFrame(index=df.index)
-
-    # Exclude label-encoded categoricals
-    encoded_categoricals = {
-        "is_fake", "activity_id", "user_id",
-        "post_country", "post_region", "post_city",
-        "device", "platform", "media_type", "content_type", "language",
-    }
-
-    # Get all numerical columns
-    numerical_columns = (df.select_dtypes(include='number').columns)
-
-    # Raw numeric signals (skip encoded categoricals)
-    for col in numerical_columns:
-        if col in df.columns and col not in encoded_categoricals:
-            features[col] = df[col].astype(float)
-
-    # Engagement ratios
-    features["comments_per_like"] = df["comments"] / (df["likes"] + eps)
-    features["shares_per_like"] = df["shares"] / (df["likes"] + eps)
-    features["shares_per_comment"]  = df["shares"] / (df["comments"] + eps)
-    features["total_engagement"] = df["likes"] + df["comments"] + df["shares"]
-    features["engagement_per_char"] = features["total_engagement"] / (df["character_count"] + eps)
-
-    # Content density signals
-    # features["hashtag_density"] = df["hashtag_count"] / (df["character_count"] + eps)
-    # features["mention_density"] = df["mention_count"] / (df["character_count"] + eps)
-    # features["url_per_char"] = df["contains_url"] / (df["character_count"] + eps)
-
-    # Log transforms to reduce skew on count columns
-    features["log_likes"] = np.log1p(df["likes"])
-    features["log_comments"] = np.log1p(df["comments"])
-    features["log_shares"] = np.log1p(df["shares"])
-    features["log_character_count"] = np.log1p(df["character_count"])
-
-    # Lexical diversity from post content using Type-Token Ratio
-    if "content" in df.columns:
-        features["lexical_diversity"] = compute_lexical_diversity(df["content"])
-
-    return features
+    # Remove empty plots
+    for j in range(len(valid_columns), len(axes)):
+        fig.delaxes(axes[j])
 
 
-def scale_features(X_df):
-    scaler = StandardScaler()
-    return scaler.fit_transform(X_df)
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, "all_log_validation_features_engineer_post.png"))
+
+    plt.show()
 
 
 def train_isolation_forest(X_train, X_all, contamination=0.5):
@@ -93,38 +96,6 @@ def train_lof(X_train, X_all, contamination=0.5):
 
     return predictions, scores
 
-
-# Derives feature importance from IsolationForest by counting how many time 
-# each feature is used as a split node across all trees, the more it splits, the more useeful the features is.
-def plot_feature_importance(if_model, feature_names, title="Feature_Importance_IF"):
-    n_features = len(feature_names)
-    importances = np.zeros(n_features)
-
-    for tree in if_model.estimators_:
-        for feature_idx in tree.tree_.feature:
-            if feature_idx >= 0:
-                importances[feature_idx] += 1
-
-    total = importances.sum()
-    if total > 0:
-        importances /= total
-
-    sorted_idx = np.argsort(importances)
-    sorted_names = [feature_names[i] for i in sorted_idx]
-    sorted_vals  = importances[sorted_idx]
-
-    plt.figure(figsize=(8, max(4, n_features * 0.35)))
-    plt.barh(sorted_names, sorted_vals, color="#4f6ef7")
-    plt.xlabel("Relative Importance (split frequency)")
-    plt.title(title.replace("_", " "))
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{title}_post.png"))
-    plt.close()
-
-    print("\n")
-    print("Print top 5 imporantce features: ")
-    for name, val in sorted(zip(feature_names, importances), key=lambda x: -x[1])[:5]:
-        print(f"{name}: {val:.4f}")
 
 
 def plot_anomaly_results(predictions, title):
@@ -164,17 +135,24 @@ def evaluate_model(y_true, y_pred, model_name):
 
     return accuracy, precision, recall, f1
 
+# Circular process of checking the enginnering features
+def check_enginner_features(df):
+    X_eng = engineer_features(df)
+    validate_log_engineer_features(X_eng)
+    X_scaled = normalize_features(X_eng)
+    pca, X_pca = apply_pca(X_scaled)
+    plot_pca_scatter(X_pca, df)
+
 
 def main(df, X_pca=None):
     # Change the is fake from Boolean to Integer
     y_true = df["is_fake"].astype(bool).astype(int).values
-
-    X_eng = engineer_features(df)
-    X_scaled = scale_features(X_eng)
+    X_scaled = X_pca
 
     CONTAMINATION = 0.5
 
     X_normal = X_scaled[~df["is_fake"].astype(bool)]
+    # X_normal = X_pca
 
     # Train Isolation Forest model
     if_model, if_preds, if_score = train_isolation_forest(X_normal, X_scaled, CONTAMINATION)
@@ -182,7 +160,6 @@ def main(df, X_pca=None):
     print("\nIsolation Forest raw predictions")
     print(pd.Series(if_preds).value_counts())
     plot_anomaly_results(if_preds, "Isolation_Forest_Result")
-    plot_feature_importance(if_model, list(X_eng.columns), "Feature_Importance_IF")
 
     # Convert raw predictions where -1 (anomaly) means 1 (fake), and 1 (normal) means 0 (real)
     if_y_pred = (if_preds == -1).astype(int)
@@ -202,3 +179,4 @@ def main(df, X_pca=None):
     evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
 
     return if_preds, lof_preds
+    
