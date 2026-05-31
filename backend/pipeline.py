@@ -11,6 +11,7 @@ from src.account_detect.p1_fake_account_cleaning import clean_dataset_account
 from src.account_detect.p2_fake_account_eda import exploratory_analysis_account
 from src.account_detect.p3_fake_account_pca import perform_PCA_account
 from src.account_detect.p4_fake_account_detection import main as training_model_account
+from src.account_detect.p4_fake_account_detection import check_enginner_accoount_features
 
 MODEL_RESULT_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "model_result.json")
 
@@ -27,6 +28,7 @@ def main():
     cleaned_account_df = clean_dataset_account()
     exploratory_analysis_account(cleaned_account_df)
     account_pca, X_account_pca = perform_PCA_account(cleaned_account_df)
+    # check_enginner_accoount_features(cleaned_account_df)
     if_account_score, lof_account_score = training_model_account(cleaned_account_df, X_pca=X_account_pca)
 
     # Save metrics to JSON for Dashboard 1

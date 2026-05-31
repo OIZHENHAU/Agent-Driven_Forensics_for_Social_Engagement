@@ -148,7 +148,7 @@ def clean_dataset():
     dataset_info(df)
     df = remove_duplicates(df)
     df = handle_missing_values(df)
-    df = remove_outliers(df)
+    # df = remove_outliers(df)
     balance_df = resample_data(df)
     encode_df = encode_columns(balance_df)
     save_clean_dataset(encode_df)

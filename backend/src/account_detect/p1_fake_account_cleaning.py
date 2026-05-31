@@ -107,7 +107,7 @@ def clean_dataset_account():
     dataset_info_account(df)
     df = remove_duplicates_account(df)
     df = handle_missing_values_account(df)
-    df = remove_outliers_account(df)
+    # df = remove_outliers_account(df)
     save_clean_dataset_account(df)
 
     print("Accoutn Detect Task 1 done.")

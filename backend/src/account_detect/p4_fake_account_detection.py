@@ -5,54 +5,18 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats import skew
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score)
+from src.account_detect.p3_fake_account_pca import (engineer_features, normalize_features_account, apply_pca_account, plot_pca_scatter_account)
 
 
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_account_data.csv")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "account")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-def engineer_features(df):
-    eps = 1e-6
-    features = pd.DataFrame(index=df.index)
-
-    numerical_columns = (df.select_dtypes(include='number').columns)
-    # Columns to remove
-    drop_columns = ["fake"]
-
-    # Keep only useful features
-    important_features = [col for col in numerical_columns if col not in drop_columns]
-
-    # Raw profile attributes
-    for col in important_features:
-        if col in df.columns:
-            features[col] = df[col]
-
-    # Enginering features
-    features["follower_following_ratio"] = df["#followers"] / (df["#follows"] + eps)
-    features["posts_per_follower"] = df["#posts"] / (df["#followers"] + eps)
-    features["following_per_follower"] = df["#follows"] / (df["#followers"] + eps)
-    features["posts_per_following"] = df["#posts"] / (df["#follows"] + eps)
-
-    features["has_description"] = (df["description length"] > 0).astype(int)
-
-    features["log_posts"] = np.log1p(df["#posts"])
-    features["log_followers"] = np.log1p(df["#followers"])
-    features["log_follows"] = np.log1p(df["#follows"])
-
-    # features["username_nums_sq"] = df["nums/length username"] ** 2
-    # features["fullname_nums_sq"] = df["nums/length fullname"] ** 2
-
-    return features
-
-
-def scale_features(X_df):
-    scaler = StandardScaler()
-    return scaler.fit_transform(X_df)
 
 
 def train_isolation_forest(X_train, X_all, contamination=0.5):
@@ -248,14 +212,84 @@ def predict_batch_accounts(rows: list) -> list:
     return all_row_results
 
 
+# Plot a log validation diagram
+def validate_log_engineer_account_features(df: pd.DataFrame) -> None:
+
+    numeric_columns = (df.select_dtypes(include=np.number).columns)
+
+    valid_columns = []
+    skipped_columns = []
+
+    # Check which columns are safe watch out for non-zero variance for skewness
+    for col in numeric_columns:
+
+        min_value = df[col].min()
+
+        if min_value > -1 and df[col].std() > 0:
+            valid_columns.append(col)
+        else:
+            skipped_columns.append(col)
+
+    print("\nSafe Columns:")
+    print(valid_columns)
+
+    print("\nSkipped Columns:")
+    print(skipped_columns)
+
+    # Create subplot
+    num_features = len(valid_columns)
+    rows = (num_features // 3) + 1
+
+    fig, axes = plt.subplots(rows, 3, figsize=(18, rows * 5))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(valid_columns):
+        clean_data = (df[col].dropna())
+
+        original_skew = skew(clean_data)
+        log_data = np.log1p(clean_data)
+        transformed_skew = skew(log_data)
+
+        print( f"\n{col}")
+
+        print(f"Original Skewness: " f"{original_skew:.2f}")
+
+        print(f"Log Transformed " f"Skewness: " f"{transformed_skew:.2f}")
+
+        axes[i].hist(log_data, bins=30)
+
+        axes[i].set_title(f"Log Distribution\n{col}")
+
+
+    # Remove empty plots
+    for j in range(len(valid_columns), len(axes)):
+        fig.delaxes(axes[j])
+
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, "all_log_validation_features_engineer_post.png"))
+
+    plt.show()
+
+
+# Circular process of checking the enginnering features
+def check_enginner_accoount_features(df):
+    X_eng = engineer_features(df)
+    validate_log_engineer_account_features(X_eng)
+    X_scaled = normalize_features_account(X_eng)
+    pca, X_pca = apply_pca_account(X_scaled)
+    plot_pca_scatter_account(X_pca, df)
+
+
 def main(df, X_pca=None):
     y_true = df["fake"].values
 
-    X_eng = engineer_features(df)
-    X_scaled = scale_features(X_eng)
+    X_scaled = X_pca
 
     contamination = 0.5
     X_normal = X_scaled[(df["fake"] == 0).values]
+    # X_normal = X_scaled
 
     # Train Isolation Forest
     if_preds, if_anomaly_score = train_isolation_forest(X_normal, X_scaled, contamination=contamination)

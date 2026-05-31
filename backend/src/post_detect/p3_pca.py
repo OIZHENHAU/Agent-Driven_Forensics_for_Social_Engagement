@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.stats import skew
 import json
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import StandardScaler
 
 
 # Get the cleaned dataset path
@@ -44,13 +44,14 @@ def engineer_features(df):
     eps = 1e-6
     features = pd.DataFrame(index=df.index)
 
-    # Exclude label-encoded categoricals
+    # Exclude label-encoded categoricals and zero-variance columns
     encoded_categoricals = {
         "is_fake", "activity_id", "user_id",
         "post_country", "post_region", "post_city",
         "device", "platform", "media_type", "content_type", "language", "contains_url",
-        "has_media", "is_weekend", "day_of_week", "hour_of_day", "hashtag_count", "like", "share", 
-        "comment", "character_count"
+        "has_media", "is_weekend", "day_of_week", "hour_of_day", "hashtag_count",
+        "likes", "shares", "comments", "character_count",
+        "mention_count",  # all zeros in this dataset
     }
 
     # Get all numerical columns
@@ -70,18 +71,17 @@ def engineer_features(df):
 
     # Content density signals
     features["hashtag_density"] = np.log1p(df["hashtag_count"] / (df["character_count"] + 1))
-    features["mention_density"] = np.log1p(df["mention_count"] / (df["character_count"] + 1))
     features["url_per_char"] = np.log1p(df["contains_url"] / (df["character_count"] + 1))
+
+    # Lexical diversity from post content using Type-Token Ratio
+    if "content" in df.columns:
+        features["lexical_diversity"] = compute_lexical_diversity(df["content"])
 
     # Log transforms to reduce skew on count columns
     features["log_likes"] = np.log1p(df["likes"])
     features["log_comments"] = np.log1p(df["comments"])
     features["log_shares"] = np.log1p(df["shares"])
     features["log_character_count"] = np.log1p(df["character_count"])
-
-    # Lexical diversity from post content using Type-Token Ratio
-    if "content" in df.columns:
-        features["lexical_diversity"] = compute_lexical_diversity(df["content"])
 
     return features
 
@@ -104,7 +104,7 @@ def select_features(df):
 
 # Normalizes the features
 def normalize_features(X):
-    scaler = RobustScaler()
+    scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     return X_scaled
@@ -174,9 +174,10 @@ def plot_explained_variance(pca):
 
 
 def perform_PCA(df):
-    # cleaned_df already has engineered features from p1 — only select & normalise
     # X = select_features(df)
     X_eng = engineer_features(df)
+    print("Engineer fearures for post: ")
+    print(X_eng.columns)
     X_scaled = normalize_features(X_eng)
     pca, X_pca = apply_pca(X_scaled)
 
