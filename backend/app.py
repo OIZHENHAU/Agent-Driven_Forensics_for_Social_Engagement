@@ -22,7 +22,7 @@ from src.post_detect.p2_eda import (plot_histogram, plot_boxplots, correlation_h
 from src.post_detect.p3_pca import (select_features, normalize_features, apply_pca, 
                                     plot_explained_variance, plot_pca_scatter, perform_PCA)
 
-from src.post_detect.p4_ml_agent import (engineer_features, scale_features, train_isolation_forest, 
+from src.post_detect.p4_ml_agent import (engineer_features, normalize_features, train_isolation_forest, 
                                          train_lof, plot_anomaly_results, plot_confusion_matrix, evaluate_model)
 
 from src.account_detect.p4_fake_account_detection import predict_single_account, predict_batch_accounts

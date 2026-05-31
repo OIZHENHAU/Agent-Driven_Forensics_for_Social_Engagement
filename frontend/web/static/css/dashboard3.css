@@ -603,6 +603,7 @@ body {
 }
 
 .modal {
+  display: block;
   background: #fff;
   border-radius: 18px;
   padding: 28px 28px 24px;

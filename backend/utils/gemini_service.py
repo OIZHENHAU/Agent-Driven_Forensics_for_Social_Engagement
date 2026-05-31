@@ -119,22 +119,55 @@ def get_feature_anomalies_tool(account_data: dict) -> dict:
         if value is None or column not in real.columns:
             continue
 
-        mean, standard_deviation = real[column].mean(), real[column].std()
-        if standard_deviation < 1e-6:
+        col_vals = real[column].dropna()
+        if len(col_vals) < 10 or col_vals.std() < 1e-6:
             continue
 
-        z_score = abs((float(value) - mean) / standard_deviation)
-        if z_score > 1.5:
-            flags_list.append({"feature": column, "account_value": float(value),
-                                "typical_range": f"{mean - standard_deviation:.2f} to {mean + standard_deviation:.2f}",
-                                "z_score": round(z_score, 2), "severity": "High" if z_score > 3.0 else "Medium"})
+        # Percentile rank — robust against the skewed distributions of follower/post counts
+        percentile = float(np.mean(col_vals <= float(value)) * 100)
+        p5  = float(col_vals.quantile(0.05))
+        p95 = float(col_vals.quantile(0.95))
 
-    flags_list.sort(key=lambda x: x["z_score"], reverse=True)
+        if percentile < 5 or percentile > 95:
+            severity = "High" if (percentile < 2 or percentile > 98) else "Medium"
+            direction = "unusually low" if percentile < 5 else "unusually high"
+            flags_list.append({
+                "feature": column,
+                "account_value": float(value),
+                "typical_range": f"{p5:.2f} to {p95:.2f}",
+                "percentile_rank": round(percentile, 1),
+                "direction": direction,
+                "severity": severity,
+            })
+
+    flags_list.sort(key=lambda x: abs(x["percentile_rank"] - 50), reverse=True)
     return {"anomalous_features": flags_list[:5], "total_anomalies": len(flags_list),
-            "summary": f"Found {len(flags_list)} features deviating significantly (z-score > 1.5) from the real-account baseline."}
+            "summary": f"Found {len(flags_list)} features outside the 5th–95th percentile of real accounts."}
 
 
 TOOL_DISPATCH = {"isolation_forest_tool": isolation_forest_tool, "lof_tool": lof_tool, "get_feature_anomalies_tool": get_feature_anomalies_tool,}
+
+RAW_TO_NORMALIZED = {
+    "profile pic": "profile_pic",
+    "#followers": "followers",
+    "#follows": "follows",
+    "#posts": "posts",
+    "nums/length username": "nums_length_username",
+    "fullname words": "fullname_words",
+    "nums/length fullname": "nums_length_fullname",
+    "name==username": "name_equals_username",
+    "description length": "description_length",
+    "external URL": "external_url",
+}
+
+def normalize_account_data(account_data: dict) -> dict:
+    normalized = {}
+    for key, value in account_data.items():
+        norm_key = RAW_TO_NORMALIZED.get(str(key).strip(), key)
+        if norm_key != "fake":
+            normalized[norm_key] = value
+    return normalized
+
 
 ACCOUNT_PARAMS = {
     "type": "object",
@@ -253,6 +286,11 @@ def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
 
 
 def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
+    account_data = normalize_account_data(account_data)
+
+    # Compute anomalies directly in Python — do not rely on LLM to construct correct tool arguments
+    anomaly_result = get_feature_anomalies_tool(account_data)
+
     if_score = ml_scores.get("if_score", "N/A")
     lof_score = ml_scores.get("lof_score", "N/A")
     ensemble = ml_scores.get("ensemble_score", "N/A")
@@ -265,39 +303,11 @@ def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
         f"- Isolation Forest authenticity score: {if_score}/100\n"
         f"- LOF authenticity score: {lof_score}/100\n"
         f"- Ensemble score: {ensemble}/100  →  Verdict: {verdict}\n\n"
-        f"Call get_feature_anomalies_tool, then write your forensic report."
+        f"Feature anomaly analysis (percentile-based, vs real-account baseline):\n"
+        f"{json.dumps(anomaly_result, indent=2)}\n\n"
+        f"Write your forensic report now."
     )
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
-
-    last_content = None
-
-    for _ in range(6):
-        response = client.chat.completions.create(model=MODEL, messages=messages, tools=ANOMALY_TOOLS, tool_choice="auto")
-        message = response.choices[0].message
-
-        if message.content:
-            last_content = message.content
-
-        msg_dict = {"role": "assistant", "content": message.content or ""}
-        if message.tool_calls:
-            msg_dict["tool_calls"] = [{"id": tc.id, "type": "function", 
-                "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
-                for tc in message.tool_calls
-            ]
-        messages.append(msg_dict)
-
-        if not message.tool_calls:
-            return message.content or last_content or "(No forensic analysis generated)"
-
-        for tool_call in message.tool_calls:
-            args = json.loads(tool_call.function.arguments)
-            fn = TOOL_DISPATCH.get(tool_call.function.name)
-            result = fn(args) if fn else {"error": f"Unknown tool: {tool_call.function.name}"}
-            messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(result)})
-
-        if "get_feature_anomalies_tool" in {tc.function.name for tc in message.tool_calls}:
-            messages.append({"role": "user", "content": "Now write your forensic report using the provided ML scores and the anomaly results above."})
-
-    final = client.chat.completions.create(model=MODEL, messages=messages)
-    return final.choices[0].message.content or last_content or "(No forensic analysis generated)"
+    response = client.chat.completions.create(model=MODEL, messages=messages)
+    return response.choices[0].message.content or "(No forensic analysis generated)"

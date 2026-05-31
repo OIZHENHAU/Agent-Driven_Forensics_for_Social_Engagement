@@ -166,9 +166,6 @@ def perform_PCA_account(df):
     # print("X_PCA:")
     # print(X_pca)
 
-    plot_pca_scatter_account(X_pca, df)
-    plot_explained_variance_account(pca)
-
     print("Account Detect Task 3 done.")
 
     return pca, X_pca

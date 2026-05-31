@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import skew
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score)
@@ -75,13 +75,7 @@ def evaluate_model(y_true, y_pred, model_name):
 
 # Use to calculate the authentic score of the model
 def auth_score(value, ref):
-    lower_score = ref.min()
-    higher_score = ref.max()
-    
-    if (lower_score == higher_score):
-        return 50
-    
-    return int(np.clip((value - lower_score) / (higher_score - lower_score) * 100, 1, 100))
+    return int(np.clip(np.mean(ref <= value) * 100, 1, 100))
 
 
 # Train all the IsoaltionForest and LOF model on the cleaned dataset
@@ -102,29 +96,33 @@ def predict_single_account(raw_input: dict) -> dict:
         "#follows": int(raw_input.get("follows", 0)),
     }])
 
+    # real_mask = (df["fake"] == 0).values
     df_features = df.drop(columns=["fake"])
     df_combined = pd.concat([df_features, single_row], ignore_index=True)
 
     X_eng = engineer_features(df_combined)
-    scaler = StandardScaler()
+    scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X_eng)
+    account_pca, X_pca = apply_pca_account(X_scaled)
 
     CONTAMINATION = 0.5
-    X_train = X_scaled[:len(df)]
+    X_ref = X_pca[:len(df)]
+    # X_train = X_ref[real_mask]
+    X_train = X_ref
 
-    # Train Isolation Forest on all reference data
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
-    if_scores = if_model.decision_function(X_scaled)
+    if_scores = if_model.decision_function(X_pca)
+    if_ref_scores = if_model.decision_function(X_train)
 
-    # Train LOF on all reference data
+
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
     lof_train_scores = lof_model.decision_function(X_train)
-    lof_new_score = float(lof_model.decision_function(X_scaled[-1:])[0])
+    lof_ref_scores = float(lof_model.decision_function(X_pca[-1:])[0])
 
-    if_auth = auth_score(if_scores[-1], if_scores[:len(df)])
-    lof_auth = auth_score(lof_new_score, lof_train_scores)
+    if_auth = auth_score(if_scores[-1], if_ref_scores)
+    lof_auth = auth_score(lof_train_scores, lof_ref_scores)
     ensemble = int(round((if_auth + lof_auth) / 2))
 
     return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, "verdict": "Authentic" if ensemble >= 50 else "Suspicious"}
@@ -179,6 +177,7 @@ def predict_batch_accounts(rows: list) -> list:
 
         return result
 
+    # real_mask = (df["fake"] == 0).values
     input_rows = [normalize_dataset_row(r) for r in rows]
     input_df = pd.DataFrame(input_rows)
 
@@ -186,24 +185,28 @@ def predict_batch_accounts(rows: list) -> list:
     df_combined = pd.concat([df_features, input_df], ignore_index=True)
 
     X_eng = engineer_features(df_combined)
-    X_scaled = StandardScaler().fit_transform(X_eng)
+    X_scaled = RobustScaler().fit_transform(X_eng)
+    account_pca, X_pca = apply_pca_account(X_scaled)
 
     CONTAMINATION = 0.5
-    X_train = X_scaled[:len(df)]
+    X_ref = X_pca[:len(df)]
+    # X_train = X_ref[real_mask]
+    X_train = X_ref
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
-    if_scores_all = if_model.decision_function(X_scaled)
+    if_scores_all = if_model.decision_function(X_pca)
+    if_ref_scores = if_model.decision_function(X_train)
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
     lof_train_scores = lof_model.decision_function(X_train)
-    lof_input_scores = lof_model.decision_function(X_scaled[len(df):])
+    lof_input_scores = lof_model.decision_function(X_pca[len(df):])
 
     all_row_results = []
     for i, row in enumerate(rows):
         index = len(df) + i
-        if_auth = auth_score(if_scores_all[index], if_scores_all[:len(df)])
+        if_auth = auth_score(if_scores_all[index], if_ref_scores)
         lof_auth = auth_score(lof_input_scores[i], lof_train_scores)
         ensemble = int(round((if_auth + lof_auth) / 2))
         all_row_results.append({"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, 
