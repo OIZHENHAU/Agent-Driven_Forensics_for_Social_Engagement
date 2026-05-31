@@ -77,7 +77,11 @@ def analyze_csv_endpoint():
     if not file:
         return jsonify({'error': 'No file uploaded'}), 400
     try:
-        df = pd.read_csv(file)
+        filename = file.filename or ''
+        if filename.lower().endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file)
+        else:
+            df = pd.read_csv(file)
         rows = df.to_dict(orient='records')
         if not rows:
             return jsonify({'error': 'CSV file is empty'}), 400

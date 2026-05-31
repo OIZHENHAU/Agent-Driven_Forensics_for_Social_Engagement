@@ -288,7 +288,7 @@ def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
 def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
     account_data = normalize_account_data(account_data)
 
-    # Compute anomalies directly in Python — do not rely on LLM to construct correct tool arguments
+    # Compute anomalies directly in Python
     anomaly_result = get_feature_anomalies_tool(account_data)
 
     if_score = ml_scores.get("if_score", "N/A")

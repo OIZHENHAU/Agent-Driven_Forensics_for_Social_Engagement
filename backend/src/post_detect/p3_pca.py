@@ -29,15 +29,17 @@ def load_dataset():
 
 
 # Caluclate the lexical diversity score by using the Type-Token RAtio (unique words / total words)
-def compute_lexical_diversity(text_series):
+def compute_lexical_diversity(text_input):
     eps = 1e-6
     def ttr(text):
         if pd.isna(text) or str(text).strip() == "":
             return 0.0
         words = str(text).lower().split()
         return len(set(words)) / (len(words) + eps)
-    
-    return text_series.apply(ttr)
+
+    if isinstance(text_input, pd.Series):
+        return text_input.apply(ttr)
+    return ttr(text_input)
 
 
 def engineer_features(df):

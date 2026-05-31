@@ -39,7 +39,7 @@ uploadZone.addEventListener('drop', e => {
   e.preventDefault();
   uploadZone.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
-  if (file && file.name.endsWith('.csv')) handleFile(file);
+  if (file && /\.(csv|xlsx|xls)$/i.test(file.name)) handleFile(file);
 });
 uploadZone.addEventListener('click', e => {
   if (e.target !== document.getElementById('csv-file-input') &&

@@ -4,6 +4,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
+from src.post_detect.p3_pca import (engineer_features, compute_lexical_diversity, normalize_features, apply_pca)
+from src.post_detect.p4_ml_agent import (train_isolation_forest, train_lof)
 
 # Get the cleaned POST dataset path
 CLEAN_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "cleaned_data.csv")
@@ -18,51 +20,8 @@ def get_training_dataset() -> pd.DataFrame:
     return training_df
 
 
-def compute_lexical_diversity(text: str) -> float:
-    if not text or str(text).strip() == "":
-        return 0.0
-    words = str(text).lower().split()
-    eps = 1e-6
-    return len(set(words)) / (len(words) + eps)
-
-
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    eps = 1e-6
-    new_features = pd.DataFrame(index=df.index)
-
-    encoded_categoricals = {"is_fake", "activity_id", "user_id", "post_country", "post_region", "post_city",
-                            "device", "platform", "media_type", "content_type", "language"}
-    
-    numerical_columns = df.select_dtypes(include="number").columns
-
-    for column in numerical_columns:
-        if column not in encoded_categoricals:
-            new_features[column] = df[column].astype(float)
-
-    new_features["comments_per_like"] = df["comments"] / (df["likes"] + eps)
-    new_features["shares_per_like"] = df["shares"] / (df["likes"] + eps)
-    new_features["shares_per_comment"] = df["shares"] / (df["comments"] + eps)
-    new_features["total_engagement"] = df["likes"] + df["comments"] + df["shares"]
-    new_features["engagement_per_char"] = new_features["total_engagement"] / (df["character_count"] + eps)
-    # new_features["hashtag_density"] = df["hashtag_count"] / (df["character_count"] + eps)
-    # new_features["mention_density"] = df["mention_count"] / (df["character_count"] + eps)
-    # new_features["url_per_char"] = df["contains_url"] / (df["character_count"] + eps)
-    new_features["log_likes"] = np.log1p(df["likes"])
-    new_features["log_comments"] = np.log1p(df["comments"])
-    new_features["log_shares"] = np.log1p(df["shares"])
-    new_features["log_character_count"] = np.log1p(df["character_count"])
-
-    if "content" in df.columns:
-        new_features["lexical_diversity"] = df["content"].apply(compute_lexical_diversity)
-
-    return new_features
-
-
-def get_authenticate_score(val: float, all_vals: np.ndarray) -> int:
-    low, high = all_vals.min(), all_vals.max()
-    if high == low:
-        return 50
-    return int(np.clip((val - low) / (high - low) * 100, 0, 100))
+def get_authenticate_score(val: float, ref_vals: np.ndarray) -> int:
+    return int(np.clip(np.mean(ref_vals <= val) * 100, 1, 100))
 
 
 POST_CSV_COLUMN_MAP = {
@@ -112,25 +71,29 @@ def predict_batch_posts(rows: list) -> list:
             "content": content,
         }
 
+    # real_mask = (df["is_fake"] == 0).values
     input_rows = [normalize_dataset_row(r) for r in rows]
     input_df = pd.DataFrame(input_rows)
 
-    combo = pd.concat([df[POST_COLUMN_USE], input_df[POST_COLUMN_USE]], ignore_index=True)
-    X_eng = engineer_features(combo)
+    df_combine = pd.concat([df[POST_COLUMN_USE], input_df[POST_COLUMN_USE]], ignore_index=True)
+    X_eng = engineer_features(df_combine)
     X_scaled = StandardScaler().fit_transform(X_eng)
+    post_pca, X_pca = apply_pca(X_scaled)
 
     CONTAMINATION = 0.5
-    X_train = X_scaled[:len(df)]
+    X_ref = X_pca[:len(df)]
+    # X_train = X_ref[real_mask]
+    X_train = X_pca
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
-    if_scores_all = if_model.decision_function(X_scaled)
-    train_if = if_scores_all[:len(df)]
+    if_scores_all = if_model.decision_function(X_pca)
+    train_if = if_model.decision_function(X_train)
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
     train_lof_scores = lof_model.decision_function(X_train)
-    lof_input_scores = lof_model.decision_function(X_scaled[len(df):])
+    lof_input_scores = lof_model.decision_function(X_pca[len(df):])
 
     results = []
     for i, row in enumerate(rows):
@@ -172,29 +135,29 @@ def predict_single_post(post_data: dict) -> dict:
         "contains_url": int(post_data.get("contains_url", 0)),
         "content": content,
     }
+
+    # real_mask = (df["is_fake"] == 0).values
     single_df = pd.DataFrame([single_row])
+    df_combine = pd.concat([df[POST_COLUMN_USE], single_df[POST_COLUMN_USE]], ignore_index=True)
 
-    use_cols = ["likes", "comments", "shares", "hour_of_day", "day_of_week",
-                "is_weekend", "has_media", "character_count", "hashtag_count",
-                "mention_count", "contains_url", "content"]
-
-    combo = pd.concat([df[use_cols], single_df[use_cols]], ignore_index=True)
-
-    X_eng = engineer_features(combo)
+    X_eng = engineer_features(df_combine)
     X_scaled = StandardScaler().fit_transform(X_eng)
+    post_pca, X_pca = apply_pca(X_scaled)
 
     CONTAMINATION = 0.5
-    X_train = X_scaled[:len(df)]
+    X_ref = X_pca[:len(df)]
+    # X_train = X_ref[real_mask]
+    X_train = X_pca
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
     train_if = if_model.decision_function(X_train)
-    if_score = get_authenticate_score(float(if_model.decision_function(X_scaled[-1:])[0]), train_if)
+    if_score = get_authenticate_score(float(if_model.decision_function(X_pca[-1:])[0]), train_if)
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
     train_lof = lof_model.decision_function(X_train)
-    lof_score = get_authenticate_score(float(lof_model.decision_function(X_scaled[-1:])[0]), train_lof)
+    lof_score = get_authenticate_score(float(lof_model.decision_function(X_pca[-1:])[0]), train_lof)
 
     ensemble_score = int(round((if_score + lof_score) / 2))
 
