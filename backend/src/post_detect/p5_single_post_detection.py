@@ -136,7 +136,7 @@ def predict_single_post(post_data: dict) -> dict:
         "content": content,
     }
 
-    real_mask = (df["is_fake"] == 0).values
+    # real_mask = (df["is_fake"] == 0).values
     single_df = pd.DataFrame([single_row])
     df_combine = pd.concat([df[POST_COLUMN_USE], single_df[POST_COLUMN_USE]], ignore_index=True)
 
@@ -146,7 +146,7 @@ def predict_single_post(post_data: dict) -> dict:
 
     CONTAMINATION = 0.5
     X_ref = X_pca[:len(df)]
-    X_train = X_ref[real_mask]  # train only on real posts; test post must NOT be in training
+    X_train = X_pca
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
