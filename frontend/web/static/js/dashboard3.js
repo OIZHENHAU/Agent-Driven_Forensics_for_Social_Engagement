@@ -318,8 +318,9 @@ async function loadAiAnalysis() {
 }
 
 function showGeminiText(text) {
+  const cleaned = text.replace(/```[\s\S]*?```/g, '').trim();
   const body = document.getElementById('m-gemini-body');
-  body.innerHTML = text
+  body.innerHTML = cleaned
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');

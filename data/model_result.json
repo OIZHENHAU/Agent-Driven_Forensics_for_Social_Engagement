@@ -1,0 +1,30 @@
+{
+  "post_detection": {
+    "isolation_forest": {
+      "accuracy": 0.7185,
+      "precision": 0.652,
+      "recall": 0.9369,
+      "f1": 0.769
+    },
+    "lof": {
+      "accuracy": 0.747,
+      "precision": 0.6738,
+      "recall": 0.9577,
+      "f1": 0.791
+    }
+  },
+  "account_detection": {
+    "isolation_forest": {
+      "accuracy": 0.739,
+      "precision": 0.6604,
+      "recall": 0.9797,
+      "f1": 0.789
+    },
+    "lof": {
+      "accuracy": 0.7537,
+      "precision": 0.6734,
+      "recall": 0.9821,
+      "f1": 0.7989
+    }
+  }
+}

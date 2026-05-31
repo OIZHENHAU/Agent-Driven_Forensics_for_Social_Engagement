@@ -21,28 +21,26 @@ def main():
     cleaned_df = clean_dataset()
     exploratory_analysis(cleaned_df)
     post_pca, X_post_pca = perform_PCA(cleaned_df)
-    # check_enginner_features(cleaned_df)
-    if_post_score, lof_post_score = train_model_post(cleaned_df, X_pca=X_post_pca)
+    post_model_results = train_model_post(cleaned_df, X_pca=X_post_pca)
 
     # Account Detection
     cleaned_account_df = clean_dataset_account()
     exploratory_analysis_account(cleaned_account_df)
     account_pca, X_account_pca = perform_PCA_account(cleaned_account_df)
-    # check_enginner_accoount_features(cleaned_account_df)
-    if_account_score, lof_account_score = training_model_account(cleaned_account_df, X_pca=X_account_pca)
+    account_model_results = training_model_account(cleaned_account_df, X_pca=X_account_pca)
 
     # Save metrics to JSON for Dashboard 1
-    '''all_model_result = {
-        "post_detection": post_metrics,
-        "account_detection": account_metrics,
+    all_model_result = {
+        "post_detection": post_model_results,
+        "account_detection": account_model_results,
     }
 
     os.makedirs(os.path.dirname(MODEL_RESULT_PATH), exist_ok=True)
     with open(MODEL_RESULT_PATH, "w") as f:
         json.dump(all_model_result, f, indent=2)
-    '''
+    
 
-    print("Pipeline complete. Metrics saved to model_metrics.json")
+    print("Pipeline complete. Model score saved to model_results.json")
 
 
 if __name__ == "__main__":

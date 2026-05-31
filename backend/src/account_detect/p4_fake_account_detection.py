@@ -296,24 +296,27 @@ def main(df, X_pca=None):
 
     # Train Isolation Forest
     if_preds, if_anomaly_score = train_isolation_forest(X_normal, X_scaled, contamination=contamination)
-
-    print("\nIsolation Forest raw predictions")
-    print(pd.Series(if_preds).value_counts())
-    plot_anomaly_results(if_preds, "Isolation_Forest_Result")
-
     if_y_pred = (if_preds == -1).astype(int)
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
-    evaluate_model(y_true, if_y_pred, "Isolation Forest")
+    if_accuracy, if_precision, if_recall, if_f1 = evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
     # Train Local Outlier Factor
     lof_preds, lof_anomaly_score = train_lof(X_normal, X_scaled, contamination)
-
-    print("\nLOF raw predictions")
-    print(pd.Series(lof_preds).value_counts())
-    plot_anomaly_results(lof_preds, "LOF_Result")
-
     lof_y_pred = (lof_preds == -1).astype(int)
     plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
-    evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
+    lof_accuracy, lof_precision, lof_recall, lof_f1 = evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
 
-    return if_preds, lof_preds
+    return {
+        "isolation_forest": {
+            "accuracy": round(float(if_accuracy), 4),
+            "precision": round(float(if_precision), 4),
+            "recall": round(float(if_recall), 4),
+            "f1": round(float(if_f1), 4),
+        },
+        "lof": {
+            "accuracy": round(float(lof_accuracy), 4),
+            "precision": round(float(lof_precision), 4),
+            "recall": round(float(lof_recall), 4),
+            "f1": round(float(lof_f1), 4),
+        }
+    }

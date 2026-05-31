@@ -2,14 +2,14 @@ import io
 import os
 import sys
 import math
+import json
 import threading
 import webbrowser
-
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask import Flask, jsonify, request, send_from_directory
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 sys.path.insert(0, os.path.dirname(__file__))
@@ -27,8 +27,13 @@ from src.post_detect.p4_ml_agent import (engineer_features, normalize_features, 
 
 from src.account_detect.p4_fake_account_detection import predict_single_account, predict_batch_accounts
 from src.post_detect.p5_single_post_detection import predict_single_post, predict_batch_posts
-from utils.gemini_service import analyze_account_with_gemini, analyze_post_with_gemini
+from utils.gemini_service import analyze_account_with_gemini, analyze_post_with_gemini, generate_model_report_with_gemini
 from pipeline import main as run_pipeline
+
+
+MODEL_RESULT_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "model_result.json")
+OUTPUTS_DIR = os.path.join(os.path.dirname(__file__), "outputs")
+
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
@@ -115,6 +120,49 @@ def analyze_csv_row_endpoint():
         return jsonify({'gemini_explanation': explanation})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.get('/api/get_model_result')
+def get_pipeline_model_results():
+    if not os.path.exists(MODEL_RESULT_PATH):
+        return jsonify({'error': 'Pipeline not yet finish running. '})
+    
+    with open(MODEL_RESULT_PATH) as result:
+        return jsonify(json.load(result))
+
+
+# API to generate the summary AI report
+@app.post('/api/generate-model-report')
+def generate_model_report():
+    data = request.get_json(force=True)
+    model_result = data.get('modelResults', {})
+
+    try:
+        report = generate_model_report_with_gemini(model_result)
+        return jsonify({'report': report})
+    
+    except Exception as error:
+        return jsonify({'error': str(error)}), 500
+
+
+@app.get('/api/output-images/<category>')
+def list_output_images(category):
+    if category not in ('post', 'account'):
+        return jsonify({'error': 'Invalid category'}), 400
+    
+    image_folder = os.path.join(OUTPUTS_DIR, category)
+    if not os.path.exists(image_folder):
+        return jsonify({'images': []})
+    
+    images = sorted(f for f in os.listdir(image_folder) if f.lower().endswith('.png'))
+    return jsonify({'images': images})
+
+
+@app.get('/outputs/<category>/<filename>')
+def serve_output_image(category, filename):
+    if category not in ('post', 'account'):
+        return jsonify({'error': 'Invalid category'}), 400
+    return send_from_directory(os.path.join(OUTPUTS_DIR, category), filename)
 
 
 if __name__ == '__main__':

@@ -184,8 +184,9 @@ function display_results(data, mode) {
   const geminiBody = document.getElementById('gemini_body');
 
   if (gemini_explanation) {
-    geminiBody.innerHTML = gemini_explanation.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                                              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+    const cleaned = gemini_explanation.replace(/```[\s\S]*?```/g, '').trim();
+    geminiBody.innerHTML = cleaned.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                                  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
     document.getElementById('gemini_section').style.display = '';
 

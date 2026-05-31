@@ -15,219 +15,29 @@ client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPEN
 MODEL = "google/gemini-2.0-flash-001"
 
 CLEAN_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_account_data.csv")
-training_df = None
-
-def get_training_data() -> pd.DataFrame:
-    global training_df
-    if training_df is None:
-        training_df = pd.read_csv(CLEAN_ACCOUNT_PATH)
-    return training_df
+CLEAN_POST_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_data.csv")
 
 
-def account_data_summary(account_data: dict) -> pd.DataFrame:
-    return pd.DataFrame([{
-        "profile pic": int(account_data.get("profile_pic", 0)),
-        "nums/length username": float(account_data.get("nums_length_username", 0)),
-        "fullname words": int(account_data.get("fullname_words", 1)),
-        "nums/length fullname": float(account_data.get("nums_length_fullname", 0)),
-        "name==username": int(account_data.get("name_equals_username", 0)),
-        "description length": int(account_data.get("description_length", 0)),
-        "external URL": int(account_data.get("external_url", 0)),
-        "private": int(account_data.get("private", 0)),
-        "#posts": int(account_data.get("posts", 0)),
-        "#followers": int(account_data.get("followers", 0)),
-        "#follows": int(account_data.get("follows", 0)),
-    }])
+ACCOUNT_SYSTEM_PROMPT = """\
+You are an investigative social media forensics agent analyzing a social media account for authenticity.
 
+The Isolation Forest and LOF authenticity scores and the feature anomaly analysis have already been computed and are provided to you in the user message.
 
-def engineer_account_features(df: pd.DataFrame) -> pd.DataFrame:
-    eps = 1
-    features = pd.DataFrame(index=df.index)
-    for column in df.select_dtypes(include="number").columns:
-        if column != "fake":
-            features[column] = df[column]
+Your job: Write a forensic report using ONLY the format below. Do NOT output any JSON, code blocks, or raw data.
 
-    features["follower_following_ratio"] = df["#followers"] / (df["#follows"] + eps)
-    features["posts_per_follower"] = df["#posts"] / (df["#followers"] + eps)
-    features["following_per_follower"] = df["#follows"] / (df["#followers"] + eps)
-    features["posts_per_following"] = df["#posts"] / (df["#follows"] + eps)
-    features["has_description"] = (df["description length"] > 0).astype(int)
-    features["log_posts"] = np.log1p(df["#posts"])
-    features["log_followers"] = np.log1p(df["#followers"])
-    features["log_follows"] = np.log1p(df["#follows"])
-
-    return features
-
-
-def get_score(val: float, all_vals: np.ndarray) -> int:
-    low_score, high_score = all_vals.min(), all_vals.max()
-    if high_score == low_score:
-        return 50
-    return int(np.clip((val - low_score) / (high_score - low_score) * 100, 0, 100))
-
-
-def isolation_forest_tool(account_data: dict) -> dict:
-    df = get_training_data()
-    single = account_data_summary(account_data)
-    combo = pd.concat([df.drop(columns=["fake"]), single], ignore_index=True)
-
-    X = StandardScaler().fit_transform(engineer_account_features(combo))
-    X_normal = X[:len(df)]
-    cont = 0.35
-
-    model = IsolationForest(n_estimators=300, contamination=cont, max_features=1.0, random_state=42)
-    model.fit(X_normal)
-    train_scores = model.decision_function(X_normal)
-    new_score = float(model.decision_function(X[-1:])[0])
-    score = get_score(new_score, train_scores)
-
-    return {"isolation_forest_authenticity_score": score, "verdict": "Authentic" if score >= 50 else "Suspicious",
-            "note": "0 = fully fake, 100 = fully authentic. The isolation forest model detects multivariate outliers."}
-
-
-def lof_tool(account_data: dict) -> dict:
-    df = get_training_data()
-    single = account_data_summary(account_data)
-    combo = pd.concat([df.drop(columns=["fake"]), single], ignore_index=True)
-    X = StandardScaler().fit_transform(engineer_account_features(combo))
-    X_normal = X[:len(df)]
-    cont = 0.35
-
-    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=cont)
-    model.fit(X_normal)
-    train_scores = model.decision_function(X_normal)
-    new_score = float(model.decision_function(X[-1:])[0])
-    score = get_score(new_score, train_scores)
-
-    return {"lof_authenticity_score": score, "verdict": "Authentic" if score >= 50 else "Suspicious",
-            "note": "0 = fake, 100 = authentic. LOF measures local density vs real-account neighbourhoods."}
-
-
-def get_feature_anomalies_tool(account_data: dict) -> dict:
-    df = get_training_data()
-    real = df[df["fake"] == 0]
-
-    mapping = {"profile_pic": "profile pic", "nums_length_username": "nums/length username",
-               "fullname_words": "fullname words", "nums_length_fullname": "nums/length fullname",
-               "name_equals_username": "name==username", "description_length": "description length",
-               "external_url": "external URL", "private": "private", "posts": "#posts",
-               "followers": "#followers", "follows": "#follows"}
-
-    flags_list = []
-    for key, column in mapping.items():
-        value = account_data.get(key)
-        if value is None or column not in real.columns:
-            continue
-
-        col_vals = real[column].dropna()
-        if len(col_vals) < 10 or col_vals.std() < 1e-6:
-            continue
-
-        # Percentile rank — robust against the skewed distributions of follower/post counts
-        percentile = float(np.mean(col_vals <= float(value)) * 100)
-        p5  = float(col_vals.quantile(0.05))
-        p95 = float(col_vals.quantile(0.95))
-
-        if percentile < 5 or percentile > 95:
-            severity = "High" if (percentile < 2 or percentile > 98) else "Medium"
-            direction = "unusually low" if percentile < 5 else "unusually high"
-            flags_list.append({
-                "feature": column,
-                "account_value": float(value),
-                "typical_range": f"{p5:.2f} to {p95:.2f}",
-                "percentile_rank": round(percentile, 1),
-                "direction": direction,
-                "severity": severity,
-            })
-
-    flags_list.sort(key=lambda x: abs(x["percentile_rank"] - 50), reverse=True)
-    return {"anomalous_features": flags_list[:5], "total_anomalies": len(flags_list),
-            "summary": f"Found {len(flags_list)} features outside the 5th–95th percentile of real accounts."}
-
-
-TOOL_DISPATCH = {"isolation_forest_tool": isolation_forest_tool, "lof_tool": lof_tool, "get_feature_anomalies_tool": get_feature_anomalies_tool,}
-
-RAW_TO_NORMALIZED = {
-    "profile pic": "profile_pic",
-    "#followers": "followers",
-    "#follows": "follows",
-    "#posts": "posts",
-    "nums/length username": "nums_length_username",
-    "fullname words": "fullname_words",
-    "nums/length fullname": "nums_length_fullname",
-    "name==username": "name_equals_username",
-    "description length": "description_length",
-    "external URL": "external_url",
-}
-
-def normalize_account_data(account_data: dict) -> dict:
-    normalized = {}
-    for key, value in account_data.items():
-        norm_key = RAW_TO_NORMALIZED.get(str(key).strip(), key)
-        if norm_key != "fake":
-            normalized[norm_key] = value
-    return normalized
-
-
-ACCOUNT_PARAMS = {
-    "type": "object",
-    "properties": {
-        "profile_pic": {"type": "integer", "description": "1 = has profile picture, 0 = no picture"},
-        "nums_length_username": {"type": "number", "description": "Fraction of username chars that are digits (0-1)"},
-        "fullname_words": {"type": "integer", "description": "Number of words in the full name"},
-        "nums_length_fullname": {"type": "number", "description": "Fraction of full-name chars that are digits (0-1)"},
-        "name_equals_username": {"type": "integer", "description": "1 = full name identical to username"},
-        "description_length": {"type": "integer", "description": "Character count of bio/description"},
-        "external_url": {"type": "integer", "description": "1 = bio contains an external URL"},
-        "private": {"type": "integer", "description": "1 = private account"},
-        "posts": {"type": "integer", "description": "Total number of posts"},
-        "followers": {"type": "integer", "description": "Follower count"},
-        "follows": {"type": "integer", "description": "Following count"},
-    },
-    "required": ["followers", "follows", "posts"],
-}
-
-TOOLS = [
-    {"type": "function", "function": {"name": "isolation_forest_tool",
-        "description": "Run the Isolation Forest unsupervised anomaly detection model. Returns an authenticity score 0-100.",
-        "parameters": ACCOUNT_PARAMS}},
-    {"type": "function", "function": {"name": "lof_tool",
-        "description": "Run the Local Outlier Factor density-based anomaly detection model. Returns an authenticity score 0-100.",
-        "parameters": ACCOUNT_PARAMS}},
-    {"type": "function", "function": {"name": "get_feature_anomalies_tool",
-        "description": "Compare account features against the statistical baseline of verified real accounts. Returns top anomalous features ranked by z-score.",
-        "parameters": ACCOUNT_PARAMS}},
-]
-
-SYSTEM_PROMPT = """\
-You are an investigative social media forensics agent.
-
-The Isolation Forest and LOF authenticity scores have already been computed and are provided to you — use those exact numbers in your report.
-
-Your job:
-1. Call get_feature_anomalies_tool with the account features to identify which specific features are anomalous.
-2. Write your final forensic report using the exact format below. Use the ML scores provided in the user message.
-
-Required output format:
+Required output format (plain text only):
 Verdict: [Fake | Suspicious | Authentic]
 Confidence: [Low | Medium | High]
 Ensemble Score: [use the provided ensemble score] / 100
 
 Red Flags:
-- [one bullet per anomalous feature from get_feature_anomalies_tool; write "None detected" if clean]
+- [one bullet per anomalous feature from the anomaly analysis; write "None detected" if no anomalies]
 
 Analysis:
-- [2-3 sentences citing the provided scores and the most anomalous features found by the tool]
+[2-3 sentences citing the provided scores and the most anomalous features]
 
-Be direct and factual.\
+Be direct and factual. Output plain text only — no markdown code blocks, no JSON.\
 """
-
-ANOMALY_TOOLS = [
-    {"type": "function", "function": {"name": "get_feature_anomalies_tool",
-        "description": "Compare account features against the statistical baseline of verified real accounts. Returns top anomalous features ranked by z-score.",
-        "parameters": ACCOUNT_PARAMS}},
-]
-
 
 POST_SYSTEM_PROMPT = """\
 You are an investigative social media forensics agent analyzing a social media post for authenticity.
@@ -243,7 +53,7 @@ Ensemble Score: [use the provided ensemble score] / 100
 Lexical Diversity (TTR): [provided value] — [brief interpretation]
 
 Red Flags:
-- [one bullet per suspicious pattern; write "None detected" if clean]
+- [one bullet per anomalous features and write "None detected" if clean]
 
 Analysis:
 - [2-3 sentences citing the provided scores, lexical diversity, and engagement patterns]
@@ -252,6 +62,7 @@ Be direct and factual.\
 """
 
 
+# Analyse the post authentication score using GEMINI AI
 def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
     if_score = ml_scores.get("if_score", "N/A")
     lof_score = ml_scores.get("lof_score", "N/A")
@@ -259,24 +70,15 @@ def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
     verdict = ml_scores.get("verdict", "Unknown")
     ld = ml_scores.get("lexical_diversity", "N/A")
 
-    content = post_data.get("content", "(no content provided)")
-    preview = (content[:400] + "…") if len(content) > 400 else content
-
     user_content = (
-        f"Analyze this social media post for authenticity.\n\n"
-        f"Post content: \"{preview}\"\n\n"
-        f"Engagement metrics:\n"
-        f"- Likes: {post_data.get('likes', 0)}\n"
-        f"- Comments: {post_data.get('comments', 0)}\n"
-        f"- Shares: {post_data.get('shares', 0)}\n"
-        f"- Hashtags: {post_data.get('hashtag_count', 0)}\n"
-        f"- Mentions: {post_data.get('mention_count', 0)}\n"
-        f"- Contains URL: {'Yes' if post_data.get('contains_url', 0) else 'No'}\n\n"
+        f"Analyze this Instagram post for authenticity.\n\n"
+        f"Post data: {post_data}\n\n"
         f"Pre-computed ML scores (use these exact values in your report):\n"
         f"- Isolation Forest authenticity score: {if_score}/100\n"
         f"- LOF authenticity score: {lof_score}/100\n"
-        f"- Ensemble score: {ensemble}/100  →  Verdict: {verdict}\n"
-        f"- Lexical Diversity (TTR): {ld}\n\n"
+        f"- Ensemble score: {ensemble}/100\n"
+        f" - Verdict: {verdict}\n"
+        f"Feature anomaly analysis (percentile-based, vs real-post baseline):\n"
         f"Write your forensic report now."
     )
 
@@ -285,12 +87,8 @@ def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
     return response.choices[0].message.content or "(No forensic analysis generated)"
 
 
+# Analyse the account authentication score using GEMJNIN AI
 def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
-    account_data = normalize_account_data(account_data)
-
-    # Compute anomalies directly in Python
-    anomaly_result = get_feature_anomalies_tool(account_data)
-
     if_score = ml_scores.get("if_score", "N/A")
     lof_score = ml_scores.get("lof_score", "N/A")
     ensemble = ml_scores.get("ensemble_score", "N/A")
@@ -302,12 +100,52 @@ def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
         f"Pre-computed ML scores (use these exact values in your report):\n"
         f"- Isolation Forest authenticity score: {if_score}/100\n"
         f"- LOF authenticity score: {lof_score}/100\n"
-        f"- Ensemble score: {ensemble}/100  →  Verdict: {verdict}\n\n"
+        f"- Ensemble score: {ensemble}/100\n"
+        f" - Verdict: {verdict}\n"
         f"Feature anomaly analysis (percentile-based, vs real-account baseline):\n"
-        f"{json.dumps(anomaly_result, indent=2)}\n\n"
         f"Write your forensic report now."
     )
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
+    messages = [{"role": "system", "content": ACCOUNT_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
     response = client.chat.completions.create(model=MODEL, messages=messages)
     return response.choices[0].message.content or "(No forensic analysis generated)"
+
+
+# Generate the precision-recall repost explanation of the two models
+def generate_model_report_with_gemini(metrics: dict) -> str:
+    post = metrics.get("post_detection", {})
+    acct = metrics.get("account_detection", {})
+
+    def fmt(m):
+        return (f"Accuracy={m.get('accuracy', 0):.4f}, Precision={m.get('precision', 0):.4f}, "
+                f"Recall={m.get('recall', 0):.4f}, F1={m.get('f1', 0):.4f}")
+
+    user_content = (
+        "You are an investigative AI forensics agent. Analyse the performance of two "
+        "unsupervised anomaly detection models — Isolation Forest (IF) and Local Outlier "
+        "Factor (LOF) — applied to both post and account authenticity detection.\n\n"
+        "POST DETECTION RESULTS:\n"
+        f"Isolation Forest : {fmt(post.get('isolation_forest', {}))}\n"
+        f"Local Outlier Factor: {fmt(post.get('lof', {}))}\n\n"
+        "ACCOUNT DETECTION RESULTS:\n"
+        f"Isolation Forest : {fmt(acct.get('isolation_forest', {}))}\n"
+        f"Local Outlier Factor: {fmt(acct.get('lof', {}))}\n\n"
+        "Write a rigorous forensic report covering exactly these four sections:\n\n"
+        "**1. Model Performance Summary**\n"
+        "Interpret each model's metrics for both post and account detection.\n\n"
+        "**2. Precision-Recall Trade-off Analysis**\n"
+        "Explain why high recall often comes at the cost of precision in unsupervised "
+        "outlier detection, referencing the actual numbers above. Discuss how the "
+        "contamination hyperparameter drives this trade-off.\n\n"
+        "**3. Business Implications**\n"
+        "What do these metrics mean for a B2B client auditing influencer accounts and posts?\n\n"
+        "**4. Recommendations**\n"
+        "How should the contamination threshold be tuned depending on whether the client "
+        "prioritises recall (catch all fakes) or precision (minimise false accusations)?\n\n"
+        "Be analytical, cite the specific numbers, and explain the inherent limitations "
+        "of unsupervised detection without labelled data."
+    )
+
+    messages = [{"role": "user", "content": user_content}]
+    response = client.chat.completions.create(model=MODEL, messages=messages)
+    return response.choices[0].message.content or "(No report generated)"

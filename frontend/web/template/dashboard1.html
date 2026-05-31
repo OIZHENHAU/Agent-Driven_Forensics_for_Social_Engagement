@@ -3,13 +3,123 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clout Detective</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>Detective Dashboard</title>
+  <link rel="stylesheet" href="../static/css/dashboard1.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
-
 <body>
-    
-</body>
 
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div class="logo-text">Clout<br/>Detective</div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard1.html" class="nav-item active">
+        <span class="nav-dot active"></span> Main Dashboard
+      </a>
+      <a href="dashboard2.html" class="nav-item">
+        <span class="nav-dot"></span> Single account Lookup
+      </a>
+      <a href="dashboard3.html" class="nav-item">
+        <span class="nav-dot"></span> Upload CSV
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      WIF3009 · Title 15<br/>
+      Unsupervised anomaly<br/>
+      detection
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1 class="page-title">Dataset Dashboard</h1>
+    <p class="page-subtitle">Model performance results for post and account authenticity detection</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post Detection</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account Detection</button>
+    </div>
+
+    
+    <div id="loading-section" class="loading">
+      <div class="spinner"></div>
+      <p>Loading pipeline...</p>
+    </div>
+
+    
+    <div id="not-ready" class="not-ready hidden">
+      Pipeline has not been run yet. Start the server to train again..
+    </div>
+
+    
+    <div id="section-post" class="hidden">
+
+      <div class="model-results-grid">
+        <div class="model-results-card" id="post-if-card"></div>
+        <div class="model-results-card" id="post-lof-card"></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-header">ISOLATION FOREST vs LOCAL OUTLIER FACTOR — POSTS</div>
+        <canvas id="post-chart" height="80"></canvas>
+      </div>
+
+      <div class="card plot-card">
+        <div class="card-header">OUTPUT PLOTS — POSTS</div>
+        <div class="plot-selector" id="post-plot-selector">
+          <p class="plot-hint">Loading plots…</p>
+        </div>
+        <div class="plot-view">
+          <img id="post-plot-img" src="" alt="" class="hidden" />
+          <p id="post-plot-placeholder" class="plot-placeholder">Select a plot above to view it</p>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="section-account" class="hidden">
+
+      <div class="model-results-grid">
+        <div class="model-results-card" id="account-if-card"></div>
+        <div class="model-results-card" id="account-lof-card"></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-header">ISOLATION FOREST vs LOCAL OUTLIER FACTOR — ACCOUNTS</div>
+        <canvas id="account-chart" height="80"></canvas>
+      </div>
+
+      <div class="card plot-card">
+        <div class="card-header">OUTPUT PLOTS — ACCOUNTS</div>
+        <div class="plot-selector" id="account-plot-selector">
+          <p class="plot-hint">Loading plots…</p>
+        </div>
+        <div class="plot-view">
+          <img id="account-plot-img" src="" alt="" class="hidden" />
+          <p id="account-plot-placeholder" class="plot-placeholder">Select a plot above to view it</p>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="report-section" id="report-section" style="display:none">
+      <div class="report-header">
+        <div>
+          <div class="report-title">AI Forensic Report</div>
+          <div class="report-subtitle">Agent-generated analysis of precision-recall trade-offs in unsupervised outlier detection</div>
+        </div>
+        <button class="report-btn" id="report-btn" onclick="generateReport()">Generate AI Report</button>
+      </div>
+      <div class="loading hidden" id="report-loading">
+        <div class="spinner"></div>
+        <p>Generating report...</p>
+      </div>
+      <div class="report-body hidden" id="report-body"></div>
+    </div>
+
+  </main>
+
+  <script src="../static/js/dashboard1.js"></script>
+</body>
 </html>
