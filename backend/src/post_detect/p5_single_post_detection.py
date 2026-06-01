@@ -1,4 +1,4 @@
-import os
+﻿import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -20,8 +20,8 @@ def get_training_dataset() -> pd.DataFrame:
     return training_df
 
 
-def get_authenticate_score(val: float, ref_vals: np.ndarray) -> int:
-    return int(np.clip(np.mean(ref_vals <= val) * 100, 1, 100))
+def get_authentication_score(value, ref):
+    return int(np.clip(np.mean(ref <= value) * 100, 1, 100))
 
 
 POST_CSV_COLUMN_MAP = {
@@ -88,18 +88,18 @@ def predict_batch_posts(rows: list) -> list:
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
     if_scores_all = if_model.decision_function(X_pca)
-    train_if = if_model.decision_function(X_train)
+    if_ref_scores = if_model.decision_function(X_train)
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
-    train_lof_scores = lof_model.decision_function(X_train)
+    lof_train_scores = lof_model.decision_function(X_train)
     lof_input_scores = lof_model.decision_function(X_pca[len(df):])
 
     results = []
     for i, row in enumerate(rows):
         idx = len(df) + i
-        if_s = get_authenticate_score(if_scores_all[idx], train_if)
-        lof_s = get_authenticate_score(lof_input_scores[i], train_lof_scores)
+        if_s = get_authentication_score(if_scores_all[idx], if_ref_scores)
+        lof_s = get_authentication_score(lof_input_scores[i], lof_train_scores)
         ensemble = int(round((if_s + lof_s) /2))
         content = input_rows[i]["content"]
         results.append({
@@ -136,7 +136,7 @@ def predict_single_post(post_data: dict) -> dict:
         "content": content,
     }
 
-    # real_mask = (df["is_fake"] == 0).values
+    # real = (df["is_fake"] == 0).values
     single_df = pd.DataFrame([single_row])
     df_combine = pd.concat([df[POST_COLUMN_USE], single_df[POST_COLUMN_USE]], ignore_index=True)
 
@@ -146,24 +146,25 @@ def predict_single_post(post_data: dict) -> dict:
 
     CONTAMINATION = 0.5
     X_ref = X_pca[:len(df)]
-    X_train = X_pca
+    # X_train = X_ref[real]
+    X_train = X_ref
 
     if_model = IsolationForest(n_estimators=300, contamination=CONTAMINATION, max_features=1.0, random_state=42)
     if_model.fit(X_train)
-    train_if = if_model.decision_function(X_train)
-    if_score = get_authenticate_score(float(if_model.decision_function(X_pca[-1:])[0]), train_if)
+    if_scores = if_model.decision_function(X_pca)
+    if_ref_scores = if_model.decision_function(X_train)
+
 
     lof_model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=CONTAMINATION)
     lof_model.fit(X_train)
-    train_lof = lof_model.decision_function(X_train)
-    lof_score = get_authenticate_score(float(lof_model.decision_function(X_pca[-1:])[0]), train_lof)
+    lof_train_scores = lof_model.decision_function(X_train)
+    lof_ref_scores = float(lof_model.decision_function(X_pca[-1:])[0])
 
-    ensemble_score = int(round((if_score + lof_score) / 2))
+    if_auth = get_authentication_score(if_scores[-1], if_ref_scores)
+    lof_auth = get_authentication_score(lof_train_scores, lof_ref_scores)
+    ensemble = int(round((if_auth + lof_auth) / 2))
 
-    return {
-        "if_score": if_score,
-        "lof_score": lof_score,
-        "ensemble_score": ensemble_score,
-        "verdict": "Authentic" if ensemble_score >= 50 else "Suspicious",
-        "lexical_diversity": round(compute_lexical_diversity(content), 4),
-    }
+
+    return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, 
+            "verdict": "Authentic" if ensemble >= 50 else "Suspicious",
+            "lexical_diversity": round(compute_lexical_diversity(content), 4)}

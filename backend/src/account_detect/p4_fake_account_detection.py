@@ -74,7 +74,7 @@ def evaluate_model(y_true, y_pred, model_name):
 
 
 # Use to calculate the authentic score of the model
-def auth_score(value, ref):
+def get_authentication_score(value, ref):
     return int(np.clip(np.mean(ref <= value) * 100, 1, 100))
 
 
@@ -121,8 +121,8 @@ def predict_single_account(raw_input: dict) -> dict:
     lof_train_scores = lof_model.decision_function(X_train)
     lof_ref_scores = float(lof_model.decision_function(X_pca[-1:])[0])
 
-    if_auth = auth_score(if_scores[-1], if_ref_scores)
-    lof_auth = auth_score(lof_train_scores, lof_ref_scores)
+    if_auth = get_authentication_score(if_scores[-1], if_ref_scores)
+    lof_auth = get_authentication_score(lof_train_scores, lof_ref_scores)
     ensemble = int(round((if_auth + lof_auth) / 2))
 
     return {"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, "verdict": "Authentic" if ensemble >= 50 else "Suspicious"}
@@ -206,18 +206,22 @@ def predict_batch_accounts(rows: list) -> list:
     all_row_results = []
     for i, row in enumerate(rows):
         index = len(df) + i
-        if_auth = auth_score(if_scores_all[index], if_ref_scores)
-        lof_auth = auth_score(lof_input_scores[i], lof_train_scores)
+        if_auth = get_authentication_score(if_scores_all[index], if_ref_scores)
+        lof_auth = get_authentication_score(lof_input_scores[i], lof_train_scores)
         ensemble = int(round((if_auth + lof_auth) / 2))
-        all_row_results.append({"if_score": if_auth, "lof_score": lof_auth, "ensemble_score": ensemble, 
-                                "verdict": "Authentic" if ensemble >= 50 else "Suspicious", "row_data": row})
+        all_row_results.append({
+            "if_score": if_auth, 
+            "lof_score": lof_auth,
+            "ensemble_score": ensemble, 
+            "verdict": "Authentic" if ensemble >= 50 else "Suspicious", 
+            "row_data": row
+        })
 
     return all_row_results
 
 
 # Plot a log validation diagram
 def validate_log_engineer_account_features(df: pd.DataFrame) -> None:
-
     numeric_columns = (df.select_dtypes(include=np.number).columns)
 
     valid_columns = []
