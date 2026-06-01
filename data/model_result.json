@@ -1,5 +1,10 @@
 {
   "post_detection": {
+    "dataset_stats": {
+      "total": 59690,
+      "real": 29845,
+      "fake": 29845
+    },
     "isolation_forest": {
       "accuracy": 0.7185,
       "precision": 0.652,
@@ -14,6 +19,11 @@
     }
   },
   "account_detection": {
+    "dataset_stats": {
+      "total": 4934,
+      "real": 2476,
+      "fake": 2458
+    },
     "isolation_forest": {
       "accuracy": 0.739,
       "precision": 0.6604,

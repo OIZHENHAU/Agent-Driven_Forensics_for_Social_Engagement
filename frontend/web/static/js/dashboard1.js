@@ -23,6 +23,7 @@ const PLOT_LABELS = {
   'all_histograms_features_account': 'Feature Histograms',
   'all_boxplots_features_account': 'Feature Boxplots',
   'correlation_heatmap_account': 'Correlation Heatmap',
+
 };
 
 function getPlotLabel(filename) {
@@ -59,6 +60,9 @@ async function loadModelsResult() {
 
     globalModelResults = data;
 
+    displayOverviewStats('post', data.post_detection?.dataset_stats);
+    displayOverviewStats('account', data.account_detection?.dataset_stats);
+
     displayModelResultCard('post-if-card', 'Isolation Forest', data.post_detection?.isolation_forest);
     displayModelResultCard('post-lof-card', 'Local Outlier Factor', data.post_detection?.lof);
     displayModelResultCard('account-if-card', 'Isolation Forest', data.account_detection?.isolation_forest);
@@ -80,6 +84,14 @@ async function loadModelsResult() {
     box.textContent = 'Error loading model results: ' + err.message;
     box.classList.remove('hidden');
   }
+}
+
+
+function displayOverviewStats(prefix, stats = {}) {
+  const fmt = n => (n ?? '—').toLocaleString();
+  document.getElementById(prefix + '-total').textContent = fmt(stats.total);
+  document.getElementById(prefix + '-real').textContent = fmt(stats.real);
+  document.getElementById(prefix + '-fake').textContent = fmt(stats.fake);
 }
 
 

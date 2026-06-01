@@ -19,7 +19,7 @@
         <span class="nav-dot active"></span> Main Dashboard
       </a>
       <a href="dashboard2.html" class="nav-item">
-        <span class="nav-dot"></span> Single account Lookup
+        <span class="nav-dot"></span> Single Account Lookup
       </a>
       <a href="dashboard3.html" class="nav-item">
         <span class="nav-dot"></span> Upload CSV
@@ -55,6 +55,24 @@
     
     <div id="section-post" class="hidden">
 
+      <div class="overview-section">
+        <div class="overview-label">POST DETECTION OVERVIEW</div>
+        <div class="overview-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="post-total">—</div>
+            <div class="stat-label">Total Posts</div>
+          </div>
+          <div class="stat-card stat-real">
+            <div class="stat-number" id="post-real">—</div>
+            <div class="stat-label">Real Posts</div>
+          </div>
+          <div class="stat-card stat-fake">
+            <div class="stat-number" id="post-fake">—</div>
+            <div class="stat-label">Suspicious Posts</div>
+          </div>
+        </div>
+      </div>
+
       <div class="model-results-grid">
         <div class="model-results-card" id="post-if-card"></div>
         <div class="model-results-card" id="post-lof-card"></div>
@@ -79,6 +97,24 @@
 
 
     <div id="section-account" class="hidden">
+
+      <div class="overview-section">
+        <div class="overview-label">ACCOUNT DETECTION OVERVIEW</div>
+        <div class="overview-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="account-total">—</div>
+            <div class="stat-label">Total Accounts</div>
+          </div>
+          <div class="stat-card stat-real">
+            <div class="stat-number" id="account-real">—</div>
+            <div class="stat-label">Real Accounts</div>
+          </div>
+          <div class="stat-card stat-fake">
+            <div class="stat-number" id="account-fake">—</div>
+            <div class="stat-label">Fake Accounts</div>
+          </div>
+        </div>
+      </div>
 
       <div class="model-results-grid">
         <div class="model-results-card" id="account-if-card"></div>

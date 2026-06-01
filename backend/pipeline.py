@@ -29,10 +29,22 @@ def main():
     account_pca, X_account_pca = perform_PCA_account(cleaned_account_df)
     account_model_results = training_model_account(cleaned_account_df, X_pca=X_account_pca)
 
+    post_overall = {
+        "total": len(cleaned_df),
+        "real": int((cleaned_df["is_fake"] == 0).sum()),
+        "fake": int((cleaned_df["is_fake"] == 1).sum()),
+    }
+
+    account_overall = {
+        "total": len(cleaned_account_df),
+        "real": int((cleaned_account_df["fake"] == 0).sum()),
+        "fake": int((cleaned_account_df["fake"] == 1).sum()),
+    }
+
     # Save metrics to JSON for Dashboard 1
     all_model_result = {
-        "post_detection": post_model_results,
-        "account_detection": account_model_results,
+        "post_detection": {"dataset_stats": post_overall, **post_model_results},
+        "account_detection": {"dataset_stats": account_overall, **account_model_results},
     }
 
     os.makedirs(os.path.dirname(MODEL_RESULT_PATH), exist_ok=True)

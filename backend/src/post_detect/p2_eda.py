@@ -32,7 +32,6 @@ def load_dataset() -> pd.DataFrame:
 
 #Plot the histogram distribution
 def plot_histogram(df: pd.DataFrame) -> None:
-
     numeric_columns = df.select_dtypes(include='number').columns
 
     num_features = len(numeric_columns)
