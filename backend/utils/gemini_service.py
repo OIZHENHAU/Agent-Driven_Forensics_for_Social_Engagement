@@ -12,7 +12,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY"))
 
-MODEL = "google/gemini-2.0-flash-001"
+MODEL = "openrouter/free"
 
 CLEAN_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_account_data.csv")
 CLEAN_POST_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_data.csv")

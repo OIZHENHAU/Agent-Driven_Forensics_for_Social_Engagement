@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Single Account Lookup - Clout Detective</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../static/css/dashboard2.css" />
 </head>
 <body>
@@ -11,7 +13,7 @@
 
   <aside class="sidebar">
     <div class="logo">
-      <div class="logo-icon"></div>
+      <div class="logo-icon"><i class="bi bi-person-fill-check"></i></div>
       <div class="logo-text">Clout<br/>Detective</div>
     </div>
 
@@ -20,18 +22,12 @@
         <span class="nav-dot"></span> Main Dashboard
       </a>
       <a href="dashboard2.html" class="nav-item active">
-        <span class="nav-dot active"></span> Single Account Lookup
+        <span class="nav-dot active"></span> Single Account LookUp
       </a>
       <a href="dashboard3.html" class="nav-item">
         <span class="nav-dot"></span> Upload CSV
       </a>
     </nav>
-
-    <div class="sidebar-footer">
-      WIF3009 · Title 15<br/>
-      Unsupervised Anomaly<br/>
-      Detection
-    </div>
   </aside>
 
 
@@ -133,13 +129,12 @@
       <div class="card">
         <div class="card-header">POST CONTENT</div>
         <div class="field-group">
-          <label>Comment / Post text <span class="help">— lexical diversity is calculated automatically</span></label>
           <textarea id="post_content" placeholder="Enter the post or comment text here…" rows="5"></textarea>
         </div>
         <div class="ld-row">
           <span class="ld-label">Lexical Diversity (TTR)</span>
           <span class="ld-badge" id="lexical_diversity_live">0.000</span>
-          <span class="ld-hint">· unique words ÷ total words &nbsp;·&nbsp; 0 = repetitive &nbsp;·&nbsp; 1 = all unique</span>
+        
         </div>
       </div>
 
@@ -233,7 +228,7 @@
       <div id="ld_section" class="ld-result-card hidden">
         <span class="ld-result-label">Lexical Diversity (TTR)</span>
         <span class="ld-result-score" id="ld_result_score">-</span>
-        <span class="ld-result-desc">Unique words ÷ total words &nbsp;·&nbsp; higher = more varied vocabulary</span>
+        <span class="ld-result-desc">Unique words / total words &nbsp;·&nbsp; higher = more varied vocabulary</span>
       </div>
 
       <div class="scores">
@@ -267,6 +262,7 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
   <script src="../static/js/dashboard2.js"></script>
 </body>
 </html>

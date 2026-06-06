@@ -529,7 +529,7 @@ body {
 .ai-btn {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(135deg, #4f6ef7 0%, #a855f7 100%);
+  background-color: black;
   color: #fff;
   border: none;
   border-radius: 10px;
