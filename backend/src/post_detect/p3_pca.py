@@ -46,20 +46,18 @@ def engineer_features(df):
     eps = 1e-6
     features = pd.DataFrame(index=df.index)
 
-    # Exclude label-encoded categoricals and zero-variance columns
     encoded_categoricals = {
         "is_fake", "activity_id", "user_id",
         "post_country", "post_region", "post_city",
         "device", "platform", "media_type", "content_type", "language", "contains_url",
         "has_media", "is_weekend", "day_of_week", "hour_of_day", "hashtag_count",
         "likes", "shares", "comments", "character_count",
-        "mention_count",  # all zeros in this dataset
+        "mention_count"
     }
 
     # Get all numerical columns
     numerical_columns = (df.select_dtypes(include='number').columns)
 
-    # Raw numeric signals (skip encoded categoricals)
     for col in numerical_columns:
         if col in df.columns and col not in encoded_categoricals:
             features[col] = df[col].astype(float)
@@ -71,7 +69,6 @@ def engineer_features(df):
     features["total_engagement"] = np.log1p(df["likes"] + df["comments"] + df["shares"])
     features["engagement_per_char"] = np.log1p((df["likes"] + df["comments"] + df["shares"]) / (df["character_count"] + 1))
 
-    # Content density signals
     features["hashtag_density"] = np.log1p(df["hashtag_count"] / (df["character_count"] + 1))
     features["url_per_char"] = np.log1p(df["contains_url"] / (df["character_count"] + 1))
 

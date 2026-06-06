@@ -29,7 +29,6 @@ def validate_log_engineer_features(df: pd.DataFrame) -> None:
 
     # Check which columns are safe watch out for non-zero variance for skewness
     for col in numeric_columns:
-
         min_value = df[col].min()
 
         if min_value > -1 and df[col].std() > 0:
