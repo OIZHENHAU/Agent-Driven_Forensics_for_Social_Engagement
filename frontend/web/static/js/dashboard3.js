@@ -237,13 +237,13 @@ function openModal(index) {
 
   const aiBtn = document.getElementById('ai-btn');
   aiBtn.disabled = false;
-  aiBtn.textContent = 'Load AI Forensic Analysis';
+  aiBtn.textContent = 'Analyze';
   document.getElementById('m-loading').classList.add('hidden');
   document.getElementById('m-gemini').classList.add('hidden');
 
   if (aiCache[index]) {
     showGeminiText(aiCache[index]);
-    aiBtn.textContent = 'Reload AI Analysis';
+    aiBtn.textContent = 'Reload Analyze';
   }
 
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -313,7 +313,7 @@ async function loadAiAnalysis() {
   } finally {
     document.getElementById('m-loading').classList.add('hidden');
     aiBtn.disabled = false;
-    aiBtn.textContent = 'Reload AI Analysis';
+    aiBtn.textContent = 'Reload Analyze';
   }
 }
 

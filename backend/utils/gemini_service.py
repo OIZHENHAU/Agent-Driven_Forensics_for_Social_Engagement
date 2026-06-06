@@ -2,7 +2,8 @@ import os
 import json
 import numpy as np
 import pandas as pd
-from openai import OpenAI
+import google.generativeai as genai
+# from openai import OpenAI
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
@@ -10,9 +11,12 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY"))
+# client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY"))
+# MODEL = "openrouter/free"
 
-MODEL = "openrouter/free"
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+MODEL = genai.GenerativeModel("gemini-2.5-flash")
+
 
 CLEAN_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_account_data.csv")
 CLEAN_POST_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cleaned_data.csv")
@@ -78,9 +82,22 @@ def analyze_post_with_gemini(post_data: dict, ml_scores: dict) -> str:
         f"Write your forensic report now."
     )
 
-    messages = [{"role": "system", "content": POST_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
-    response = client.chat.completions.create(model=MODEL, messages=messages)
-    return response.choices[0].message.content or "(No forensic analysis generated)"
+    # messages = [{"role": "system", "content": POST_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
+    # response = client.chat.completions.create(model=MODEL, messages=messages)
+    # return response.choices[0].message.content or "(No forensic analysis generated)"\
+
+    final_prompt = f"""
+        {POST_SYSTEM_PROMPT}
+
+        {user_content}
+    """
+    try:
+        response = MODEL.generate_content(final_prompt)
+        return response.text 
+    
+    except Exception as error:
+        return f"(Fail to generated the post analysing due to: {str(error)})"
+
 
 
 # Analyse the account authentication score using GEMJNIN AI
@@ -91,7 +108,7 @@ def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
     verdict = ml_scores.get("verdict", "Unknown")
 
     user_content = (
-        f"Analyze this Instagram account for authenticity.\n\n"
+        f"Analyze this account for authenticity.\n\n"
         f"Account data: {account_data}\n\n"
         f"Pre-computed ML scores (use these exact values in your report):\n"
         f"- Isolation Forest authenticity score: {if_score}/100\n"
@@ -102,9 +119,23 @@ def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
         f"Write your forensic report now."
     )
 
-    messages = [{"role": "system", "content": ACCOUNT_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
-    response = client.chat.completions.create(model=MODEL, messages=messages)
-    return response.choices[0].message.content or "(No forensic analysis generated)"
+    # messages = [{"role": "system", "content": ACCOUNT_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
+    # response = client.chat.completions.create(model=MODEL, messages=messages)
+    # return response.choices[0].message.content or "(No forensic analysis generated)"
+
+    final_prompt = f"""
+        {ACCOUNT_SYSTEM_PROMPT}
+
+        {user_content}
+    """
+
+    try:
+        response = MODEL.generate_content(final_prompt)
+        return response.text 
+    
+    except Exception as error:
+        return f"(Fail to generated the account analysing due to: {str(error)})"
+
 
 
 # Generate the precision-recall repost explanation of the two models
@@ -142,6 +173,13 @@ def generate_model_report_with_gemini(metrics: dict) -> str:
         "of unsupervised detection without labelled data."
     )
 
-    messages = [{"role": "user", "content": user_content}]
-    response = client.chat.completions.create(model=MODEL, messages=messages)
-    return response.choices[0].message.content or "(No report generated)"
+    # messages = [{"role": "user", "content": user_content}]
+    # response = client.chat.completions.create(model=MODEL, messages=messages)
+    # return response.choices[0].message.content or "(No report generated)"
+
+    try:
+        response = MODEL.generate_content(user_content)
+        return response.text
+    
+    except Exception as error:
+        return f"(Fail to generate the summary of the precision-recall report due to: {str(error)})"
