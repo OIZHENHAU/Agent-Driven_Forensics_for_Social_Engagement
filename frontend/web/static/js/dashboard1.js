@@ -182,6 +182,12 @@ async function loadPlots(category) {
     selector.innerHTML = images.map(img =>
       `<button class="plot-btn" onclick="showPlot('${category}','${img}',this)">${getPlotLabel(img)}</button>`).join('');
 
+    if (category === 'post' || category === 'account') {
+      const pcaBtn = Array.from(selector.querySelectorAll('.plot-btn'))
+        .find(b => b.textContent === 'PCA Projection');
+      if (pcaBtn) pcaBtn.click();
+    }
+
   } catch {
     selector.innerHTML = '<p class="plot-hint">Could not load plots.</p>';
   }

@@ -47,12 +47,10 @@ def engineer_features(df):
     features = pd.DataFrame(index=df.index)
 
     encoded_categoricals = {
-        "is_fake", "activity_id", "user_id",
-        "post_country", "post_region", "post_city",
+        "is_fake", "activity_id", "user_id","post_country", "post_region", "post_city",
         "device", "platform", "media_type", "content_type", "language", "contains_url",
         "has_media", "is_weekend", "day_of_week", "hour_of_day", "hashtag_count",
-        "likes", "shares", "comments", "character_count",
-        "mention_count"
+        "likes", "shares", "comments", "character_count", "mention_count"
     }
 
     # Get all numerical columns

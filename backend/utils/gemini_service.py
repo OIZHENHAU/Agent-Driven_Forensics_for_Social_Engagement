@@ -24,8 +24,9 @@ CLEAN_POST_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "c
 
 ACCOUNT_SYSTEM_PROMPT = """\
 You are an investigative social media forensics agent analyzing a social media account for authenticity.
-The Isolation Forest and LOF authenticity scores and the feature anomaly analysis have already been computed and are provided to you in the user message.
-Your job: Write a forensic report using ONLY the format below. Do NOT output any JSON, code blocks, or raw data.
+The Isolation Forest and LOF authenticity scores have already been computed and are provided to you.
+Your job: review the account content, profile signals, and ML scores, then identify suspicious patterns and write a forensic report.
+
 
 Required output format:
 Verdict: [Fake | Suspicious | Authentic]
@@ -33,10 +34,10 @@ Confidence: [Low | Medium | High]
 Ensemble Score: [use the provided ensemble score] / 100
 
 Red Flags:
-- [one bullet per anomalous feature from the anomaly analysis; write "None detected" if no anomalies]
+- [one bullet per anomalous features from the anomaly analysis; write "None detected" if clean]
 
 Analysis:
-[2-3 sentences citing the provided scores and the most anomalous features]
+- [2-3 sentences citing the provided scores and the most suspicious account features]
 
 Be direct and factual. Output plain text only — no markdown code blocks, no JSON.\
 """
@@ -108,15 +109,14 @@ def analyze_account_with_gemini(account_data: dict, ml_scores: dict) -> str:
     verdict = ml_scores.get("verdict", "Unknown")
 
     user_content = (
-        f"Analyze this account for authenticity.\n\n"
+        f"Analyze this Instagram account for authenticity.\n\n"
         f"Account data: {account_data}\n\n"
         f"Pre-computed ML scores (use these exact values in your report):\n"
         f"- Isolation Forest authenticity score: {if_score}/100\n"
         f"- LOF authenticity score: {lof_score}/100\n"
         f"- Ensemble score: {ensemble}/100\n"
-        f" - Verdict: {verdict}\n"
-        f"Feature anomaly analysis (percentile-based, vs real-account baseline):\n"
-        f"Write your forensic report now."
+        f"- Verdict: {verdict}\n\n"
+        f"Review the account data above and identify any suspicious signals. Write your forensic report now."
     )
 
     # messages = [{"role": "system", "content": ACCOUNT_SYSTEM_PROMPT}, {"role": "user", "content": user_content}]
@@ -164,13 +164,6 @@ def generate_model_report_with_gemini(metrics: dict) -> str:
         "Explain why high recall often comes at the cost of precision in unsupervised "
         "outlier detection, referencing the actual numbers above. Discuss how the "
         "contamination hyperparameter drives this trade-off.\n\n"
-        "**3. Business Implications**\n"
-        "What do these metrics mean for a B2B client auditing influencer accounts and posts?\n\n"
-        "**4. Recommendations**\n"
-        "How should the contamination threshold be tuned depending on whether the client "
-        "prioritises recall (catch all fakes) or precision (minimise false accusations)?\n\n"
-        "Be analytical, cite the specific numbers, and explain the inherent limitations "
-        "of unsupervised detection without labelled data."
     )
 
     # messages = [{"role": "user", "content": user_content}]

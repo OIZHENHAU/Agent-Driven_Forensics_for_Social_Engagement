@@ -32,15 +32,15 @@
 
 
   <main class="main">
-    <h1 class="page-title">Single Account Lookup</h1>
+    <h1 class="page-title">Manual Input Features</h1>
     <p class="page-subtitle">Enter metrics manually to score any account or post</p>
 
     <div class="tabs">
-      <button class="tab active" id="tab-account" onclick="switchTab('account')">Manual input</button>
-      <button class="tab" id="tab-post" onclick="switchTab('post')">Post input</button>
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post Input</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account Input</button>
     </div>
 
-    <div id="section-account">
+    <div id="section-account" class="hidden">
       <div class="card">
         <div class="card-header">ACCOUNT METRICS</div>
         <div class="field-grid">
@@ -124,23 +124,11 @@
       <button class="analyse-btn" id="analyseBtn" onclick="analyseAccount()">Analyse account</button>
     </div>
 
-    <div id="section-post" class="hidden">
-
-      <div class="card">
-        <div class="card-header">POST CONTENT</div>
-        <div class="field-group">
-          <textarea id="post_content" placeholder="Enter the post or comment text here…" rows="5"></textarea>
-        </div>
-        <div class="ld-row">
-          <span class="ld-label">Lexical Diversity (TTR)</span>
-          <span class="ld-badge" id="lexical_diversity_live">0.000</span>
-        
-        </div>
-      </div>
+    <div id="section-post">
 
       <div class="card">
         <div class="card-header">ENGAGEMENT METRICS</div>
-        <div class="field-grid">
+        <div class="field-grid" style="margin-bottom: 10px;">
           <div class="field-group">
             <label>Likes</label>
             <input type="number" id="post_likes" placeholder="e.g. 120" min="0" />
@@ -154,10 +142,7 @@
             <input type="number" id="post_shares" placeholder="e.g. 5" min="0" />
           </div>
         </div>
-      </div>
 
-      <div class="card">
-        <div class="card-header">CONTENT SIGNALS</div>
         <div class="field-grid">
           <div class="field-group">
             <label>Hashtag count</label>
@@ -185,6 +170,18 @@
       </div>
 
       <div class="card">
+        <div class="card-header">POST CONTENT</div>
+        <div class="field-group">
+          <textarea id="post_content" placeholder="Enter the post or comment text here…" rows="5"></textarea>
+        </div>
+        <div class="ld-row">
+          <span class="ld-label">Lexical Diversity (TTR)</span>
+          <span class="ld-badge" id="lexical_diversity_live">0.000</span>
+        
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header">POST TIMING</div>
         <div class="field-grid" style="margin-bottom: 20px;">
           <div class="field-group">
@@ -206,7 +203,7 @@
             <span class="help">- posting time</span>
           </label>
           <div class="slider-row">
-            <input type="range" id="hour_of_day" min="0" max="23" step="1" value="12" />
+            <input type="range" id="hour_of_day" min="0" max="23" step="1" value="12" style="color: #a855f7;"/>
             <span class="slider-val" id="hour_of_day_val">12</span>
           </div>
         </div>

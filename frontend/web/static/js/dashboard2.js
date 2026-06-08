@@ -4,7 +4,7 @@ document.querySelectorAll('input[type="range"]').forEach(slider => {
 
   function refresh() {
     const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
-    slider.style.background = `linear-gradient(to right, #4f6ef7 ${pct}%, #d1d5db ${pct}%)`;
+    slider.style.background = `linear-gradient(to right, #a855f7 ${pct}%, #d1d5db ${pct}%)`;
     if (valEl) {
       const step = parseFloat(slider.step || 1);
       valEl.textContent = step >= 1

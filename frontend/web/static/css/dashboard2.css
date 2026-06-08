@@ -64,7 +64,7 @@ body {
 
 .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
 
-.nav-item.active { background: rgba(224,92,122,0.18); color: #fff; }
+.nav-item.active { background: rgba(168,85,247,0.18); color: #fff; }
 
 .nav-dot {
   width: 8px; height: 8px;
@@ -73,7 +73,7 @@ body {
   flex-shrink: 0;
 }
 
-.nav-dot.active { background: #e05c7a; }
+.nav-dot.active { background: #a855f7; }
 
 .sidebar-footer {
   color: #4a5570;
@@ -104,7 +104,7 @@ body {
   margin-bottom: -1px;
   font-size: 14px;
   font-weight: 600;
-  color: #6b7280;
+  color: black;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
@@ -131,7 +131,7 @@ body {
   font-weight: 700;
   letter-spacing: 1.1px;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: black;
   margin-bottom: 18px;
 }
 
@@ -145,7 +145,7 @@ body {
 .field-group label {
   display: block;
   font-size: 12px;
-  color: #6b7280;
+  color: black;
   margin-bottom: 6px;
 }
 
@@ -195,7 +195,7 @@ input[type="range"] {
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  background: linear-gradient(to right, #4f6ef7 0%, #d1d5db 0%);
+  background: linear-gradient(to right, #a855f7 0%, #d1d5db 0%);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -203,7 +203,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px; height: 18px;
   border-radius: 50%;
   background: #fff;
-  border: 2.5px solid #4f6ef7;
+  border: 2.5px solid #a855f7;
   box-shadow: 0 1px 4px rgba(0,0,0,0.18);
   cursor: pointer;
 }
@@ -212,7 +212,7 @@ input[type="range"]::-moz-range-thumb {
   width: 18px; height: 18px;
   border-radius: 50%;
   background: #fff;
-  border: 2.5px solid #4f6ef7;
+  border: 2.5px solid #a855f7;
   cursor: pointer;
 }
 
@@ -259,7 +259,7 @@ input[type="range"]::-moz-range-thumb {
 .spinner {
   width: 36px; height: 36px;
   border: 3px solid #e5e7eb;
-  border-top-color: #4f6ef7;
+  border-top-color: #a855f7;
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
   margin: 0 auto 14px;
@@ -395,13 +395,13 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .ld-badge {
-  background: #eef2ff;
-  color: #4f6ef7;
+  background: purple;
+  color: white;
   font-weight: 700;
   font-size: 15px;
   padding: 3px 12px;
   border-radius: 20px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid plum;
   min-width: 58px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -434,7 +434,7 @@ input[type="range"]::-moz-range-thumb {
 .ld-result-score {
   font-size: 30px;
   font-weight: 700;
-  color: #4f6ef7;
+  color: #a855f7;
   font-variant-numeric: tabular-nums;
 }
 

@@ -33,14 +33,14 @@
     <p class="page-subtitle">Analysing multiple accounts or posts at once by uploading a CSV file</p>
 
     <div class="tabs">
-      <button class="tab active" id="tab-account" onclick="switchTab('account')">Account CSV</button>
-      <button class="tab" id="tab-post" onclick="switchTab('post')">Post CSV</button>
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post CSV</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account CSV</button>
     </div>
 
     <div class="card required-card">
       <div class="card-header">REQUIRED COLUMNS</div>
-      <code class="cols-hint" id="cols-hint-account">profile_pic, followers, following, posts, description_length, external_url, private, name_equals_username, fullname_words, nums_length_username, nums_length_fullname</code>
-      <code class="cols-hint hidden" id="cols-hint-post">likes, comments, shares, character_count, hashtag_count, mention_count, contains_url, has_media, content, hour_of_day, day_of_week</code>
+      <code class="cols-hint hidden" id="cols-hint-account">profile_pic, followers, following, posts, description_length, external_url, private, name_equals_username, fullname_words, nums_length_username, nums_length_fullname</code>
+      <code class="cols-hint" id="cols-hint-post">likes, comments, shares, character_count, hashtag_count, mention_count, contains_url, has_media, content, hour_of_day, day_of_week</code>
     </div>
 
     <div class="upload-card card" id="upload-zone">

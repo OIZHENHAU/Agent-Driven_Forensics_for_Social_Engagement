@@ -1,4 +1,4 @@
-let currentMode = 'account';
+let currentMode = 'post';
 let parsedRows = [];
 let analysisResults = [];
 let aiCache = {};
@@ -27,7 +27,6 @@ function resetAll() {
 }
 
 
-// ── File input ───────────────────────────────────────────────────────────────
 document.getElementById('csv-file-input').addEventListener('change', function () {
   if (this.files && this.files[0]) handleFile(this.files[0]);
 });
@@ -146,10 +145,10 @@ function rowsToCsv(rows) {
 
 
 function renderResults(data) {
-  document.getElementById('sum-total').textContent     = data.total;
+  document.getElementById('sum-total').textContent = data.total;
   document.getElementById('sum-authentic').textContent = data.authentic;
   document.getElementById('sum-suspicious').textContent = data.suspicious;
-  document.getElementById('results-count').textContent  = data.total;
+  document.getElementById('results-count').textContent = data.total;
 
   const isPost = currentMode === 'post';
   const keyHeaders = isPost
