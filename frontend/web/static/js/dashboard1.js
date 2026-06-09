@@ -133,13 +133,13 @@ function displayModelResultBarChart(canvasId, detection = {}) {
         {
           label: 'Isolation Forest',
           data: keys.map(k => parseFloat(((if_d[k] || 0) * 100).toFixed(1))),
-          backgroundColor: 'rgba(79, 110, 247, 0.75)',
+          backgroundColor: 'rgba(168, 85, 247, 0.85)',
           borderRadius: 6,
         },
         {
           label: 'Local Outlier Factor',
           data: keys.map(k => parseFloat(((lof_d[k] || 0) * 100).toFixed(1))),
-          backgroundColor: 'rgba(168, 85, 247, 0.75)',
+          backgroundColor: 'rgba(107, 33, 168, 0.85)',
           borderRadius: 6,
         },
       ],
