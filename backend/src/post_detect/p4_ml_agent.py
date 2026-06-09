@@ -79,16 +79,16 @@ def validate_log_engineer_features(df: pd.DataFrame) -> None:
     plt.show()
 
 
-def train_isolation_forest(X_train, X_all, contamination=0.5):
-    model = IsolationForest(n_estimators=300, contamination=contamination, max_features=1.0, random_state=42)
+def train_isolation_forest(X_train, X_all, contamination=0.5, n_estimator=200, max_features=1.0):
+    model = IsolationForest(n_estimators=n_estimator, contamination=contamination, max_features=max_features, random_state=42)
     model.fit(X_train)
     scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
     return model, predictions, scores
 
 
-def train_lof(X_train, X_all, contamination=0.5):
-    model = LocalOutlierFactor(n_neighbors=20, novelty=True, metric="euclidean", contamination=contamination)
+def train_lof(X_train, X_all, contamination=0.5, n_neighbors=10):
+    model = LocalOutlierFactor(n_neighbors=n_neighbors, novelty=True, metric="euclidean", contamination=contamination)
     model.fit(X_train)
     scores = model.decision_function(X_all)
     predictions = model.predict(X_all)
@@ -154,12 +154,12 @@ def main(df, X_pca=None):
     X_normal = X_scaled[~df["is_fake"].astype(bool)]
     # X_normal = X_pca
 
-    if_model, if_preds, if_score = train_isolation_forest(X_normal, X_scaled, CONTAMINATION)
+    if_model, if_preds, if_score = train_isolation_forest(X_normal, X_scaled, CONTAMINATION, n_estimator=200, max_features=1.0)
     if_y_pred = (if_preds == -1).astype(int)
     plot_confusion_matrix(y_true, if_y_pred, "Isolation_Forest_Confusion_Matrix")
     if_accuracy, if_precision, if_recall, if_f1 = evaluate_model(y_true, if_y_pred, "Isolation Forest")
 
-    lof_preds, lof_score = train_lof(X_normal, X_scaled, CONTAMINATION)
+    lof_preds, lof_score = train_lof(X_normal, X_scaled, CONTAMINATION, n_neighbors=10)
     lof_y_pred = (lof_preds == -1).astype(int)
     plot_confusion_matrix(y_true, lof_y_pred, "LOF_Confusion_Matrix")
     lof_accuracy, lof_precision, lof_recall, lof_f1 = evaluate_model(y_true, lof_y_pred, "Local Outlier Factor")
