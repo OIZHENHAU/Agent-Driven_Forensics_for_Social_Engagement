@@ -32,12 +32,15 @@
 
 
   <main class="main">
-    <h1 class="page-title">Manual Input Features</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <i class="bi bi-pencil-square" style="font-size: 2rem;"></i>
+      <h1 class="page-title">Manual Input</h1>
+    </div>
     <p class="page-subtitle">Enter metrics manually to score any account or post</p>
 
     <div class="tabs">
-      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post Input</button>
-      <button class="tab" id="tab-account" onclick="switchTab('account')">Account Input</button>
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account</button>
     </div>
 
     <div id="section-account" class="hidden">

@@ -126,7 +126,7 @@ body {
   margin-right: 28px; 
   margin-bottom: -1px;
   font-size: 14px; 
-  font-weight: 600; 
+  font-weight: 600;
   color: black;
   cursor: pointer; 
   transition: color 0.15s, border-color 0.15s;

@@ -414,8 +414,8 @@ input[type="range"]::-moz-range-thumb {
 
 
 .ld-result-card {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  background: #f0f4ff;
+  border: #a855f7;
   border-radius: 12px;
   padding: 16px 24px;
   margin-bottom: 16px;

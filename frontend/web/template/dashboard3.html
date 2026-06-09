@@ -29,12 +29,15 @@
   </aside>
 
   <main class="main">
-    <h1 class="page-title">Upload CSV</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem;"></i>
+      <h1 class="page-title">Upload CSV</h1>
+    </div>
     <p class="page-subtitle">Analysing multiple accounts or posts at once by uploading a CSV file</p>
 
     <div class="tabs">
-      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post CSV</button>
-      <button class="tab" id="tab-account" onclick="switchTab('account')">Account CSV</button>
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account</button>
     </div>
 
     <div class="card required-card">

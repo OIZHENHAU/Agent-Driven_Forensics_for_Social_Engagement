@@ -30,12 +30,15 @@
   </aside>
 
   <main class="main">
-    <h1 class="page-title">Dataset Dashboard</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <i class="bi bi-clipboard2-data-fill" style="font-size: 2rem;"></i>
+      <h1 class="page-title">Dataset Dashboard</h1>
+    </div>
     <p class="page-subtitle">Model performance results for post and account authenticity detection</p>
 
     <div class="tabs">
-      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post Detection</button>
-      <button class="tab" id="tab-account" onclick="switchTab('account')">Account Detection</button>
+      <button class="tab active" id="tab-post" onclick="switchTab('post')">Post</button>
+      <button class="tab" id="tab-account" onclick="switchTab('account')">Account</button>
     </div>
 
     
