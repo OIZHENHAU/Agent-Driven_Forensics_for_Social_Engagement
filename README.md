@@ -53,16 +53,31 @@ There are 5 python file in the `src` which is based on your task.
 ### Dashboard 1:
 ![Diagram](img/Dashboard1.png)
 
+![Diagram](img/Dashboard1.1.png)
+
+![Diagram](img/Dashboard1.2.png)
+
+![Diagram](img/Dashboard1.3.png)
+
+![Diagram](img/Dashboard1.4.png)
+
 - For the graph that need to include in the dashboard, can refer it in the `img/dashboard1_graph` folder.
 - User able to select the username that from the upload csv file and it will display the `Authenticity Confidence Score.` and the reason of labelling as a suspicious account.
 
 ### Dashboard 2:
 ![Diagram](img/Dashboard2.png)
 
+![Diagram](img/Dashboard2.1.png)
+
+
 - User can manually input the value which allow the agent to detect suspicious account.
 
 ### Dashboard 3:
 ![Diagram](img/Dashboard3.png)
+
+![Diagram](img/Dashboard3.1.png)
+
+![Diagram](img/Dashboard3.2.png)
 
 - User upload the csv file and the agent will learn and display the result.
 
